@@ -14,6 +14,7 @@ build/
 .env.test.local
 .env.production.local
 .manus-logs/
+graphify-out/
 client_secret_*.json
 
 # IDE and editor files
