@@ -1,52 +1,76 @@
-# Portfolio.Ai
+# 📈 Portfolio.Ai
 
-Local development setup for UI + server with OAuth sign-in.
+**Portfolio.Ai** is a premium, AI-powered investment portfolio system designed to give you deep insights into your financial assets. Built with a modern tech stack and a stunning 3D-animated interface, it combines real-time asset tracking with intelligent risk analysis and AI-driven assistance.
 
-## Quick start
+![Portfolio Dashboard Mockup](https://raw.githubusercontent.com/lucide-react/lucide/main/icons/trending-up.svg)
 
-1. Copy `.env.example` to `.env`.
-2. Fill OAuth values:
-   - `JWT_SECRET`
-   - For Google sign-in (recommended local flow):
-     - `VITE_GOOGLE_CLIENT_ID`
-     - `GOOGLE_OAUTH_CLIENT_ID`
-     - `GOOGLE_OAUTH_CLIENT_SECRET`
-   - For legacy/custom OAuth portal flow:
-     - `VITE_APP_ID`
-     - `VITE_OAUTH_PORTAL_URL`
-     - `OAUTH_SERVER_URL`
-3. Install deps: `corepack pnpm install`
-4. Start app: `corepack pnpm run dev`
-5. Open: `http://localhost:3000`
+## ✨ Features
 
-## OAuth flow used by this app
+- **🚀 Real-time Dashboard**: A comprehensive overview of your net worth, portfolio performance, and asset distribution.
+- **🤖 AI Portfolio Assistant**: Personalized insights and strategy recommendations powered by advanced AI.
+- **📊 Advanced Risk Analysis**: Deep dive into your portfolio's volatility, sector exposure, and risk metrics.
+- **💹 Smart Trading Simulation**: Seamless buy/sell interface with real-time price tracking.
+- **📋 Asset Management**: Manage holdings, watchlists, and transaction history in one place.
+- **🔐 Secure OAuth Integration**: Support for Google Sign-in and custom OAuth portals.
+- **🎨 Premium UI/UX**: Built with Framer Motion animations, 3D landing pages, and a responsive glassmorphism design.
 
-- Frontend builds login URL in `client/src/const.ts` as:
-  - Google mode: `https://accounts.google.com/o/oauth2/v2/auth?...`
-  - Fallback mode: `${VITE_OAUTH_PORTAL_URL}/app-auth?appId=...&redirectUri=...&state=...&type=signIn`
-- Redirect URI is fixed to:
-  - `http://localhost:3000/api/oauth/callback` (or current origin in browser)
-- Backend callback handler:
-  - `server/_core/oauth.ts`
-- OAuth token + userinfo exchange client:
-  - Google mode: Google token + userinfo endpoints directly from `server/_core/oauth.ts`
-  - Fallback mode: `server/_core/sdk.ts` using `OAUTH_SERVER_URL`
+## 🛠 Tech Stack
 
-## Google Cloud Console settings (Web application)
+- **Frontend**: React 19, Vite, Tailwind CSS (v4), Framer Motion, Radix UI.
+- **Backend**: Node.js, Express, tRPC (Type-safe API).
+- **Database**: MySQL with Drizzle ORM.
+- **Cloud/Infrastructure**: AWS S3 (Storage), Google OAuth.
+- **Development Tools**: TypeScript, Vitest, Esbuild.
 
-- Authorized JavaScript origins:
-  - `http://localhost:3000`
-- Authorized redirect URIs:
-  - `http://localhost:3000/api/oauth/callback`
+## 🚀 Getting Started
 
-## Troubleshooting Google sign-in
+### Prerequisites
 
-- Error `401: invalid_client` means Google does not recognize the `client_id` sent by the app.
-- Verify `VITE_GOOGLE_CLIENT_ID` exactly matches the OAuth **Client ID** from Google Cloud (must end with `.apps.googleusercontent.com`).
-- Do **not** put `GOCSPX-...` into `VITE_GOOGLE_CLIENT_ID`; that value is the **client secret** and belongs only in `GOOGLE_OAUTH_CLIENT_SECRET`.
-- After updating `.env`, fully restart the dev server.
+- [Node.js](https://nodejs.org/) (v18+)
+- [pnpm](https://pnpm.io/) (v10+)
+- [MySQL](https://www.mysql.com/) database instance.
 
-## Notes
+### Installation
 
-- If `DATABASE_URL` is missing, sign-in still works but user upsert is skipped with a warning.
-- If analytics env vars are missing, you'll see warnings from `%VITE_ANALYTICS_ENDPOINT%` placeholders.
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-username/investment-portfolio-system.git
+   cd investment-portfolio-system
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   pnpm install
+   ```
+
+3. **Set up environment variables**:
+   Copy `.env.example` to `.env` and fill in your values:
+   ```bash
+   cp .env.example .env
+   ```
+   *Required variables: `DATABASE_URL`, `JWT_SECRET`, `VITE_GOOGLE_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`.*
+
+4. **Initialize the database**:
+   ```bash
+   npm run db:push
+   ```
+
+5. **Start development server**:
+   ```bash
+   npm run dev
+   ```
+
+### 📦 Build & Production
+
+- **Build Project**: `npm run build`
+- **Start Production Server**: `npm run start`
+
+---
+
+## 🔒 Security Note
+
+This repository uses a `.gitignore` to protect sensitive environment variables (`.env`) and OAuth secrets. **Never** remove these files from the ignore list.
+
+## 📄 License
+
+This project is licensed under the MIT License.
