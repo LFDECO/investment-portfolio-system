@@ -1,0 +1,849 @@
+{
+  "communities": {
+    "0": [
+      "context_createcontext",
+      "db_getdb",
+      "db_getuserbyopenid",
+      "db_upsertuser",
+      "sdk_createoauthhttpclient",
+      "sdk_isnonemptystring",
+      "sdk_oauthservice",
+      "sdk_oauthservice_constructor",
+      "sdk_oauthservice_decodestate",
+      "sdk_oauthservice_gettokenbycode",
+      "sdk_oauthservice_getuserinfobytoken",
+      "sdk_sdkserver",
+      "sdk_sdkserver_authenticaterequest",
+      "sdk_sdkserver_constructor",
+      "sdk_sdkserver_createsessiontoken",
+      "sdk_sdkserver_deriveloginmethod",
+      "sdk_sdkserver_exchangecodefortoken",
+      "sdk_sdkserver_getsessionsecret",
+      "sdk_sdkserver_getuserinfo",
+      "sdk_sdkserver_getuserinfowithjwt",
+      "sdk_sdkserver_parsecookies",
+      "sdk_sdkserver_signsession",
+      "sdk_sdkserver_verifysession",
+      "server_core_context_ts",
+      "server_core_sdk_ts",
+      "server_db_ts"
+    ],
+    "1": [
+      "api_addwatchlistitem",
+      "api_apirequest",
+      "api_buyasset",
+      "api_clearauthtoken",
+      "api_fetchassets",
+      "api_fetchdefaultportfolio",
+      "api_fetchmarketdaily",
+      "api_fetchmarkethistory",
+      "api_fetchportfolio",
+      "api_fetchtransactions",
+      "api_fetchtrendingstocks",
+      "api_fetchwatchlist",
+      "api_getauthtoken",
+      "api_removewatchlistitem",
+      "api_sellasset",
+      "api_setauthtoken",
+      "buysell_clearform",
+      "buysell_handleconfirmtransaction",
+      "buysell_loadmarketdata",
+      "buysell_toasset",
+      "client_src_lib_api_ts",
+      "client_src_pages_buysell_tsx",
+      "client_src_pages_watchlist_tsx",
+      "watchlist_handleaddtowatchlist",
+      "watchlist_handleremove"
+    ],
+    "2": [
+      "schemaapi_authmiddleware",
+      "schemaapi_buildportfolioresponse",
+      "schemaapi_ensureuseridbyemail",
+      "schemaapi_fetchhistoricalprices",
+      "schemaapi_fetchliveprices",
+      "schemaapi_fetchlivequotesnapshots",
+      "schemaapi_fetchyahooquoterows",
+      "schemaapi_getassetswithfallback",
+      "schemaapi_getauth",
+      "schemaapi_getbearertoken",
+      "schemaapi_getcandidatetokens",
+      "schemaapi_getcookietoken",
+      "schemaapi_getpool",
+      "schemaapi_getportfoliorows",
+      "schemaapi_getyahoorangefordays",
+      "schemaapi_normalizesessionemail",
+      "schemaapi_recalcandpersistportfoliovalue",
+      "schemaapi_seedassetsfromyahoo",
+      "server_core_schemaapi_ts"
+    ],
+    "3": [
+      "client_src_components_map_tsx",
+      "client_src_components_ui_dialog_tsx",
+      "client_src_components_ui_input_tsx",
+      "client_src_components_ui_textarea_tsx",
+      "client_src_hooks_usecomposition_ts",
+      "client_src_hooks_usepersistfn_ts",
+      "dialog_cn",
+      "dialog_dialog",
+      "dialog_dialogoverlay",
+      "dialog_usedialogcomposition",
+      "input_input",
+      "map_loadmapscript",
+      "map_mapview",
+      "textarea_textarea",
+      "usecomposition_usecomposition",
+      "usepersistfn_usepersistfn"
+    ],
+    "4": [
+      "index_findavailableport",
+      "index_isportavailable",
+      "index_startserver",
+      "oauth_decoderedirecturifromstate",
+      "oauth_exchangegooglecodefortoken",
+      "oauth_getgoogleuserinfo",
+      "oauth_getqueryparam",
+      "oauth_registeroauthroutes",
+      "schemaapi_registerschemaapiroutes",
+      "server_core_index_ts",
+      "server_core_oauth_ts",
+      "server_core_storageproxy_ts",
+      "server_core_vite_ts",
+      "storageproxy_registerstorageproxy",
+      "vite_servestatic",
+      "vite_setupvite"
+    ],
+    "5": [
+      "client_public_manus_debug_collector_js",
+      "debug_collector_compacttext",
+      "debug_collector_describeelement",
+      "debug_collector_eltext",
+      "debug_collector_formatarg",
+      "debug_collector_formatargs",
+      "debug_collector_getinputvaluesafe",
+      "debug_collector_installuieventlisteners",
+      "debug_collector_issensitivefield",
+      "debug_collector_loguievent",
+      "debug_collector_prunebuffer",
+      "debug_collector_reportlogs",
+      "debug_collector_sanitizevalue",
+      "debug_collector_shouldignoretarget",
+      "debug_collector_tryparsejson"
+    ],
+    "6": [
+      "client_src_components_ui_dropdown_menu_tsx",
+      "dropdown_menu_dropdownmenucontent",
+      "dropdown_menu_dropdownmenuitem",
+      "dropdown_menu_dropdownmenulabel",
+      "dropdown_menu_dropdownmenuportal",
+      "dropdown_menu_dropdownmenuradiogroup",
+      "dropdown_menu_dropdownmenuradioitem",
+      "dropdown_menu_dropdownmenushortcut",
+      "dropdown_menu_dropdownmenusubcontent",
+      "dropdown_menu_dropdownmenusubtrigger",
+      "dropdown_menu_dropdownmenutrigger"
+    ],
+    "7": [
+      "client_src_components_ui_menubar_tsx",
+      "menubar_cn",
+      "menubar_menubar",
+      "menubar_menubarlabel",
+      "menubar_menubarradiogroup",
+      "menubar_menubarradioitem",
+      "menubar_menubarshortcut",
+      "menubar_menubarsubcontent",
+      "menubar_menubarsubtrigger"
+    ],
+    "8": [
+      "imagegeneration_generateimage",
+      "server_core_imagegeneration_ts",
+      "server_storage_ts",
+      "storage_appendhashsuffix",
+      "storage_getforgeconfig",
+      "storage_normalizekey",
+      "storage_storageget",
+      "storage_storagegetsignedurl",
+      "storage_storageput"
+    ],
+    "9": [
+      "llm_assertapikey",
+      "llm_ensurearray",
+      "llm_invokellm",
+      "llm_normalizecontentpart",
+      "llm_normalizemessage",
+      "llm_normalizeresponseformat",
+      "llm_normalizetoolchoice",
+      "llm_resolveapiurl",
+      "server_core_llm_ts"
+    ],
+    "10": [
+      "client_src_const_ts",
+      "client_src_core_hooks_useauth_ts",
+      "client_src_main_tsx",
+      "client_src_pages_home_tsx",
+      "const_getloginurl",
+      "home_home",
+      "main_redirecttologinifunauthorized",
+      "useauth_useauth"
+    ],
+    "11": [
+      "alert_dialog_alertdialogaction",
+      "alert_dialog_alertdialogcancel",
+      "alert_dialog_alertdialogdescription",
+      "alert_dialog_alertdialogportal",
+      "alert_dialog_alertdialogtrigger",
+      "alert_dialog_cn",
+      "client_src_components_ui_alert_dialog_tsx"
+    ],
+    "12": [
+      "breadcrumb_breadcrumb",
+      "breadcrumb_breadcrumbellipsis",
+      "breadcrumb_breadcrumblink",
+      "breadcrumb_breadcrumbpage",
+      "breadcrumb_breadcrumbseparator",
+      "breadcrumb_cn",
+      "client_src_components_ui_breadcrumb_tsx"
+    ],
+    "13": [
+      "client_src_components_ui_navigation_menu_tsx",
+      "navigation_menu_navigationmenu",
+      "navigation_menu_navigationmenucontent",
+      "navigation_menu_navigationmenuitem",
+      "navigation_menu_navigationmenulist",
+      "navigation_menu_navigationmenutrigger",
+      "navigation_menu_navigationmenuviewport"
+    ],
+    "14": [
+      "client_src_components_ui_pagination_tsx",
+      "pagination_cn",
+      "pagination_pagination",
+      "pagination_paginationcontent",
+      "pagination_paginationellipsis",
+      "pagination_paginationitem",
+      "pagination_paginationnext"
+    ],
+    "15": [
+      "client_src_components_ui_select_tsx",
+      "select_selectitem",
+      "select_selectlabel",
+      "select_selectscrolldownbutton",
+      "select_selectscrollupbutton",
+      "select_selectseparator",
+      "select_selecttrigger"
+    ],
+    "16": [
+      "client_src_components_ui_sidebar_tsx",
+      "sidebar_cn",
+      "sidebar_handlekeydown",
+      "sidebar_sidebarmenu",
+      "sidebar_sidebarmenubutton",
+      "sidebar_sidebarmenuitem",
+      "sidebar_usesidebar"
+    ],
+    "17": [
+      "errors_badrequesterror",
+      "errors_forbiddenerror",
+      "errors_httperror",
+      "errors_httperror_constructor",
+      "errors_notfounderror",
+      "errors_unauthorizederror",
+      "shared_core_errors_ts"
+    ],
+    "18": [
+      "client_src_components_ui_form_tsx",
+      "form_cn",
+      "form_formcontrol",
+      "form_formdescription",
+      "form_formmessage",
+      "form_useformfield"
+    ],
+    "19": [
+      "client_src_components_ui_sheet_tsx",
+      "sheet_sheetdescription",
+      "sheet_sheetfooter",
+      "sheet_sheetheader",
+      "sheet_sheetoverlay",
+      "sheet_sheettitle"
+    ],
+    "20": [
+      "notification_buildendpointurl",
+      "notification_isnonemptystring",
+      "notification_notifyowner",
+      "notification_trimvalue",
+      "notification_validatepayload",
+      "server_core_notification_ts"
+    ],
+    "21": [
+      "vite_config_ensurelogdir",
+      "vite_config_trimlogfile",
+      "vite_config_ts",
+      "vite_config_vitepluginmanusdebugcollector",
+      "vite_config_writetologfile"
+    ],
+    "22": [
+      "client_src_components_errorboundary_tsx",
+      "errorboundary_errorboundary",
+      "errorboundary_errorboundary_constructor",
+      "errorboundary_errorboundary_getderivedstatefromerror",
+      "errorboundary_errorboundary_render"
+    ],
+    "23": [
+      "carousel_carousel",
+      "carousel_carouselnext",
+      "carousel_cn",
+      "carousel_usecarousel",
+      "client_src_components_ui_carousel_tsx"
+    ],
+    "24": [
+      "client_src_components_ui_context_menu_tsx",
+      "context_menu_contextmenugroup",
+      "context_menu_contextmenuportal",
+      "context_menu_contextmenusub",
+      "context_menu_contextmenutrigger"
+    ],
+    "25": [
+      "client_src_components_ui_drawer_tsx",
+      "drawer_cn",
+      "drawer_drawerdescription",
+      "drawer_draweroverlay",
+      "drawer_drawertitle"
+    ],
+    "26": [
+      "client_src_components_ui_table_tsx",
+      "table_cn",
+      "table_table",
+      "table_tablebody",
+      "table_tableheader"
+    ],
+    "27": [
+      "client_src_components_ui_sonner_tsx",
+      "client_src_contexts_themecontext_tsx",
+      "sonner_toaster",
+      "themecontext_themeprovider",
+      "themecontext_usetheme"
+    ],
+    "28": [
+      "aichatbox_handlekeydown",
+      "aichatbox_handlesubmit",
+      "aichatbox_scrolltobottom",
+      "client_src_components_aichatbox_tsx"
+    ],
+    "29": [
+      "accordion_accordioncontent",
+      "accordion_accordionitem",
+      "accordion_accordiontrigger",
+      "client_src_components_ui_accordion_tsx"
+    ],
+    "30": [
+      "avatar_avatar",
+      "avatar_avatarfallback",
+      "avatar_avatarimage",
+      "client_src_components_ui_avatar_tsx"
+    ],
+    "31": [
+      "card_carddescription",
+      "card_cardfooter",
+      "card_cn",
+      "client_src_components_ui_card_tsx"
+    ],
+    "32": [
+      "client_src_components_ui_input_otp_tsx",
+      "input_otp_cn",
+      "input_otp_inputotp",
+      "input_otp_inputotpgroup"
+    ],
+    "33": [
+      "client_src_components_ui_item_tsx",
+      "item_cn",
+      "item_itemgroup",
+      "item_itemseparator"
+    ],
+    "34": [
+      "client_src_components_ui_tabs_tsx",
+      "tabs_tabs",
+      "tabs_tabslist",
+      "tabs_tabstrigger"
+    ],
+    "35": [
+      "client_src_components_ui_toggle_group_tsx",
+      "toggle_group_cn",
+      "toggle_group_togglegroup",
+      "toggle_group_togglegroupitem"
+    ],
+    "36": [
+      "client_src_components_ui_tooltip_tsx",
+      "tooltip_tooltip",
+      "tooltip_tooltipcontent",
+      "tooltip_tooltipprovider"
+    ],
+    "37": [
+      "client_src_pages_componentshowcase_tsx",
+      "componentshowcase_handlechatsend",
+      "componentshowcase_handledialogkeydown",
+      "componentshowcase_handledialogsubmit"
+    ],
+    "38": [
+      "cookies_getsessioncookieoptions",
+      "cookies_isipaddress",
+      "cookies_issecurerequest",
+      "server_core_cookies_ts"
+    ],
+    "39": [
+      "server_core_voicetranscription_ts",
+      "voicetranscription_getfileextension",
+      "voicetranscription_getlanguagename",
+      "voicetranscription_transcribeaudio"
+    ],
+    "40": [
+      "client_src_components_dashboardlayout_tsx",
+      "dashboardlayout_handlelogout",
+      "dashboardlayout_isactive"
+    ],
+    "41": [
+      "alert_alert",
+      "alert_cn",
+      "client_src_components_ui_alert_tsx"
+    ],
+    "42": [
+      "calendar_calendar",
+      "calendar_cn",
+      "client_src_components_ui_calendar_tsx"
+    ],
+    "43": [
+      "chart_cn",
+      "chart_usechart",
+      "client_src_components_ui_chart_tsx"
+    ],
+    "44": [
+      "client_src_components_ui_collapsible_tsx",
+      "collapsible_collapsiblecontent",
+      "collapsible_collapsibletrigger"
+    ],
+    "45": [
+      "client_src_components_ui_hover_card_tsx",
+      "hover_card_hovercardcontent",
+      "hover_card_hovercardtrigger"
+    ],
+    "46": [
+      "client_src_components_ui_radio_group_tsx",
+      "radio_group_radiogroup",
+      "radio_group_radiogroupitem"
+    ],
+    "47": [
+      "client_src_components_ui_resizable_tsx",
+      "resizable_resizablehandle",
+      "resizable_resizablepanelgroup"
+    ],
+    "48": [
+      "client_src_components_ui_scroll_area_tsx",
+      "scroll_area_scrollarea",
+      "scroll_area_scrollbar"
+    ],
+    "49": [
+      "client_src_components_ui_slider_tsx",
+      "slider_cn",
+      "slider_slider"
+    ],
+    "50": [
+      "aiassistant_handlesendmessage",
+      "aiassistant_scrolltobottom",
+      "client_src_pages_aiassistant_tsx"
+    ],
+    "51": [
+      "map_getmapsconfig",
+      "map_makerequest",
+      "server_core_map_ts"
+    ],
+    "52": [
+      "schemauser_ensureschemauserbyemail",
+      "schemauser_getpool",
+      "server_core_schemauser_ts"
+    ],
+    "53": [
+      "client_src_components_dashboardlayoutskeleton_tsx",
+      "dashboardlayoutskeleton_dashboardlayoutskeleton"
+    ],
+    "54": [
+      "client_src_components_datatable_tsx",
+      "datatable_getalignclass"
+    ],
+    "55": [
+      "client_src_components_manusdialog_tsx",
+      "manusdialog_handleopenchange"
+    ],
+    "56": [
+      "badge_badge",
+      "client_src_components_ui_badge_tsx"
+    ],
+    "57": [
+      "button_group_buttongroup",
+      "client_src_components_ui_button_group_tsx"
+    ],
+    "58": [
+      "button_cn",
+      "client_src_components_ui_button_tsx"
+    ],
+    "59": [
+      "checkbox_checkbox",
+      "client_src_components_ui_checkbox_tsx"
+    ],
+    "60": [
+      "client_src_components_ui_command_tsx",
+      "command_cn"
+    ],
+    "61": [
+      "client_src_components_ui_empty_tsx",
+      "empty_cn"
+    ],
+    "62": [
+      "client_src_components_ui_field_tsx",
+      "field_cn"
+    ],
+    "63": [
+      "client_src_components_ui_input_group_tsx",
+      "input_group_cn"
+    ],
+    "64": [
+      "client_src_components_ui_kbd_tsx",
+      "kbd_cn"
+    ],
+    "65": [
+      "client_src_components_ui_label_tsx",
+      "label_label"
+    ],
+    "66": [
+      "client_src_components_ui_popover_tsx",
+      "popover_popovertrigger"
+    ],
+    "67": [
+      "client_src_components_ui_separator_tsx",
+      "separator_separator"
+    ],
+    "68": [
+      "client_src_components_ui_skeleton_tsx",
+      "skeleton_skeleton"
+    ],
+    "69": [
+      "client_src_components_ui_spinner_tsx",
+      "spinner_spinner"
+    ],
+    "70": [
+      "client_src_hooks_usemobile_tsx",
+      "usemobile_useismobile"
+    ],
+    "71": [
+      "client_src_lib_utils_ts",
+      "utils_cn"
+    ],
+    "72": [
+      "client_src_pages_notfound_tsx",
+      "notfound_notfound"
+    ],
+    "73": [
+      "auth_logout_test_createauthcontext",
+      "server_auth_logout_test_ts"
+    ],
+    "74": [
+      "dataapi_calldataapi",
+      "server_core_dataapi_ts"
+    ],
+    "75": [
+      "env_getenv",
+      "server_core_env_ts"
+    ],
+    "76": [
+      "drizzle_config_ts"
+    ],
+    "77": [
+      "vitest_config_ts"
+    ],
+    "78": [
+      "client_src_app_tsx"
+    ],
+    "79": [
+      "client_src_components_assetcard_tsx"
+    ],
+    "80": [
+      "client_src_components_breadcrumb_tsx"
+    ],
+    "81": [
+      "client_src_components_emptystate_tsx"
+    ],
+    "82": [
+      "client_src_components_loadingskeleton_tsx"
+    ],
+    "83": [
+      "client_src_components_portfoliocard_tsx"
+    ],
+    "84": [
+      "client_src_components_statcard_tsx"
+    ],
+    "85": [
+      "client_src_components_ui_aspect_ratio_tsx"
+    ],
+    "86": [
+      "client_src_components_ui_progress_tsx"
+    ],
+    "87": [
+      "client_src_components_ui_switch_tsx"
+    ],
+    "88": [
+      "client_src_components_ui_toggle_tsx"
+    ],
+    "89": [
+      "client_src_lib_trpc_ts"
+    ],
+    "90": [
+      "client_src_pages_dashboard_tsx"
+    ],
+    "91": [
+      "client_src_pages_holdings_tsx"
+    ],
+    "92": [
+      "client_src_pages_riskanalysis_tsx"
+    ],
+    "93": [
+      "client_src_pages_transactions_tsx"
+    ],
+    "94": [
+      "drizzle_relations_ts"
+    ],
+    "95": [
+      "drizzle_schema_ts"
+    ],
+    "96": [
+      "server_routers_ts"
+    ],
+    "97": [
+      "server_core_systemrouter_ts"
+    ],
+    "98": [
+      "server_core_trpc_ts"
+    ],
+    "99": [
+      "server_core_types_cookie_d_ts"
+    ],
+    "100": [
+      "server_core_types_manustypes_ts"
+    ],
+    "101": [
+      "shared_const_ts"
+    ],
+    "102": [
+      "shared_types_ts"
+    ]
+  },
+  "cohesion": {
+    "0": 0.12,
+    "1": 0.15,
+    "2": 0.18,
+    "3": 0.13,
+    "4": 0.15,
+    "5": 0.25,
+    "6": 0.18,
+    "7": 0.22,
+    "8": 0.39,
+    "9": 0.36,
+    "10": 0.29,
+    "11": 0.29,
+    "12": 0.29,
+    "13": 0.29,
+    "14": 0.29,
+    "15": 0.29,
+    "16": 0.33,
+    "17": 0.29,
+    "18": 0.53,
+    "19": 0.33,
+    "20": 0.6,
+    "21": 0.6,
+    "22": 0.4,
+    "23": 0.5,
+    "24": 0.4,
+    "25": 0.4,
+    "26": 0.4,
+    "27": 0.4,
+    "28": 0.83,
+    "29": 0.5,
+    "30": 0.5,
+    "31": 0.5,
+    "32": 0.5,
+    "33": 0.5,
+    "34": 0.5,
+    "35": 0.5,
+    "36": 0.5,
+    "37": 0.67,
+    "38": 0.67,
+    "39": 0.83,
+    "40": 0.67,
+    "41": 0.67,
+    "42": 0.67,
+    "43": 0.67,
+    "44": 0.67,
+    "45": 0.67,
+    "46": 0.67,
+    "47": 0.67,
+    "48": 0.67,
+    "49": 0.67,
+    "50": 0.67,
+    "51": 1.0,
+    "52": 1.0,
+    "53": 1.0,
+    "54": 1.0,
+    "55": 1.0,
+    "56": 1.0,
+    "57": 1.0,
+    "58": 1.0,
+    "59": 1.0,
+    "60": 1.0,
+    "61": 1.0,
+    "62": 1.0,
+    "63": 1.0,
+    "64": 1.0,
+    "65": 1.0,
+    "66": 1.0,
+    "67": 1.0,
+    "68": 1.0,
+    "69": 1.0,
+    "70": 1.0,
+    "71": 1.0,
+    "72": 1.0,
+    "73": 1.0,
+    "74": 1.0,
+    "75": 1.0,
+    "76": 1.0,
+    "77": 1.0,
+    "78": 1.0,
+    "79": 1.0,
+    "80": 1.0,
+    "81": 1.0,
+    "82": 1.0,
+    "83": 1.0,
+    "84": 1.0,
+    "85": 1.0,
+    "86": 1.0,
+    "87": 1.0,
+    "88": 1.0,
+    "89": 1.0,
+    "90": 1.0,
+    "91": 1.0,
+    "92": 1.0,
+    "93": 1.0,
+    "94": 1.0,
+    "95": 1.0,
+    "96": 1.0,
+    "97": 1.0,
+    "98": 1.0,
+    "99": 1.0,
+    "100": 1.0,
+    "101": 1.0,
+    "102": 1.0
+  },
+  "gods": [
+    {
+      "id": "api_apirequest",
+      "label": "apiRequest()",
+      "degree": 14
+    },
+    {
+      "id": "sdk_sdkserver",
+      "label": "SDKServer",
+      "degree": 12
+    },
+    {
+      "id": "index_startserver",
+      "label": "startServer()",
+      "degree": 7
+    },
+    {
+      "id": "schemaapi_authmiddleware",
+      "label": "authMiddleware()",
+      "degree": 6
+    },
+    {
+      "id": "debug_collector_installuieventlisteners",
+      "label": "installUiEventListeners()",
+      "degree": 5
+    },
+    {
+      "id": "storage_storageput",
+      "label": "storagePut()",
+      "degree": 5
+    },
+    {
+      "id": "llm_invokellm",
+      "label": "invokeLLM()",
+      "degree": 5
+    },
+    {
+      "id": "sdk_oauthservice",
+      "label": "OAuthService",
+      "degree": 5
+    },
+    {
+      "id": "debug_collector_loguievent",
+      "label": "logUiEvent()",
+      "degree": 4
+    },
+    {
+      "id": "const_getloginurl",
+      "label": "getLoginUrl()",
+      "degree": 4
+    }
+  ],
+  "surprises": [
+    {
+      "source": "generateImage()",
+      "target": "storagePut()",
+      "source_files": [
+        "C:\\Users\\91801\\Documents\\GitHub\\investment-portfolio-system\\server\\_core\\imageGeneration.ts",
+        "C:\\Users\\91801\\Documents\\GitHub\\investment-portfolio-system\\server\\storage.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; peripheral node `generateImage()` unexpectedly reaches hub `storagePut()`"
+    },
+    {
+      "source": "startServer()",
+      "target": "registerStorageProxy()",
+      "source_files": [
+        "C:\\Users\\91801\\Documents\\GitHub\\investment-portfolio-system\\server\\_core\\index.ts",
+        "C:\\Users\\91801\\Documents\\GitHub\\investment-portfolio-system\\server\\_core\\storageProxy.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; peripheral node `registerStorageProxy()` unexpectedly reaches hub `startServer()`"
+    },
+    {
+      "source": "startServer()",
+      "target": "registerOAuthRoutes()",
+      "source_files": [
+        "C:\\Users\\91801\\Documents\\GitHub\\investment-portfolio-system\\server\\_core\\index.ts",
+        "C:\\Users\\91801\\Documents\\GitHub\\investment-portfolio-system\\server\\_core\\oauth.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; peripheral node `registerOAuthRoutes()` unexpectedly reaches hub `startServer()`"
+    },
+    {
+      "source": "startServer()",
+      "target": "registerSchemaApiRoutes()",
+      "source_files": [
+        "C:\\Users\\91801\\Documents\\GitHub\\investment-portfolio-system\\server\\_core\\index.ts",
+        "C:\\Users\\91801\\Documents\\GitHub\\investment-portfolio-system\\server\\_core\\schemaApi.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; peripheral node `registerSchemaApiRoutes()` unexpectedly reaches hub `startServer()`"
+    },
+    {
+      "source": "startServer()",
+      "target": "setupVite()",
+      "source_files": [
+        "C:\\Users\\91801\\Documents\\GitHub\\investment-portfolio-system\\server\\_core\\index.ts",
+        "C:\\Users\\91801\\Documents\\GitHub\\investment-portfolio-system\\server\\_core\\vite.ts"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; peripheral node `setupVite()` unexpectedly reaches hub `startServer()`"
+    }
+  ]
+}

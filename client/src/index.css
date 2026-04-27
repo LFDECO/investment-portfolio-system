@@ -1,0 +1,381 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --primary: oklch(0.55 0.2 259);
+  --primary-foreground: oklch(0.98 0.001 0);
+  --sidebar-primary: oklch(0.5 0.18 259);
+  --sidebar-primary-foreground: oklch(0.98 0.001 0);
+  --chart-1: oklch(0.6 0.22 259);
+  --chart-2: oklch(0.55 0.2 259);
+  --chart-3: oklch(0.5 0.18 259);
+  --chart-4: oklch(0.45 0.16 259);
+  --chart-5: oklch(0.4 0.14 259);
+  --radius: 0.75rem;
+  --background: oklch(0.99 0.001 0);
+  --foreground: oklch(0.2 0.01 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.01 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.01 0);
+  --secondary: oklch(0.95 0.01 259);
+  --secondary-foreground: oklch(0.3 0.01 0);
+  --muted: oklch(0.92 0.01 0);
+  --muted-foreground: oklch(0.55 0.02 0);
+  --accent: oklch(0.65 0.2 150);
+  --accent-foreground: oklch(0.98 0.001 0);
+  --destructive: oklch(0.6 0.22 25);
+  --destructive-foreground: oklch(0.98 0.001 0);
+  --border: oklch(0.9 0.005 0);
+  --input: oklch(0.95 0.005 0);
+  --ring: oklch(0.55 0.2 259);
+  --sidebar: oklch(0.98 0.002 259);
+  --sidebar-foreground: oklch(0.2 0.01 0);
+  --sidebar-accent: oklch(0.55 0.2 259);
+  --sidebar-accent-foreground: oklch(0.98 0.001 0);
+  --sidebar-border: oklch(0.9 0.005 0);
+  --sidebar-ring: oklch(0.55 0.2 259);
+}
+
+.dark {
+  --primary: oklch(0.65 0.22 259);
+  --primary-foreground: oklch(0.98 0.001 0);
+  --sidebar-primary: oklch(0.6 0.2 259);
+  --sidebar-primary-foreground: oklch(0.98 0.001 0);
+  --background: oklch(0.12 0.01 259);
+  --foreground: oklch(0.9 0.01 0);
+  --card: oklch(0.18 0.01 259);
+  --card-foreground: oklch(0.9 0.01 0);
+  --popover: oklch(0.18 0.01 259);
+  --popover-foreground: oklch(0.9 0.01 0);
+  --secondary: oklch(0.22 0.01 259);
+  --secondary-foreground: oklch(0.8 0.01 0);
+  --muted: oklch(0.28 0.01 259);
+  --muted-foreground: oklch(0.7 0.02 0);
+  --accent: oklch(0.75 0.22 150);
+  --accent-foreground: oklch(0.12 0.01 259);
+  --destructive: oklch(0.7 0.24 25);
+  --destructive-foreground: oklch(0.98 0.001 0);
+  --border: oklch(0.3 0.01 259);
+  --input: oklch(0.25 0.01 259);
+  --ring: oklch(0.65 0.22 259);
+  --chart-1: oklch(0.6 0.22 259);
+  --chart-2: oklch(0.55 0.2 259);
+  --chart-3: oklch(0.5 0.18 259);
+  --chart-4: oklch(0.45 0.16 259);
+  --chart-5: oklch(0.4 0.14 259);
+  --sidebar: oklch(0.15 0.01 259);
+  --sidebar-foreground: oklch(0.9 0.01 0);
+  --sidebar-accent: oklch(0.65 0.22 259);
+  --sidebar-accent-foreground: oklch(0.98 0.001 0);
+  --sidebar-border: oklch(0.3 0.01 259);
+  --sidebar-ring: oklch(0.65 0.22 259);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    letter-spacing: -0.01em;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display, system-ui, -apple-system, sans-serif);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  h1 {
+    font-size: 2.5rem;
+    line-height: 1.2;
+  }
+  h2 {
+    font-size: 2rem;
+    line-height: 1.3;
+  }
+  h3 {
+    font-size: 1.5rem;
+    line-height: 1.4;
+  }
+  h4 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+}
+
+@layer components {
+  /**
+   * Custom container utility that centers content and adds responsive padding.
+   *
+   * This overrides Tailwind's default container behavior to:
+   * - Auto-center content (mx-auto)
+   * - Add responsive horizontal padding
+   * - Set max-width for large screens
+   *
+   * Usage: <div className="container">...</div>
+   *
+   * For custom widths, use max-w-* utilities directly:
+   * <div className="max-w-6xl mx-auto px-4">...</div>
+   */
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem; /* 16px - mobile padding */
+    padding-right: 1rem;
+  }
+
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 1.5rem; /* 24px - tablet padding */
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 2rem; /* 32px - desktop padding */
+      padding-right: 2rem;
+      max-width: 1280px; /* Standard content width */
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════
+   ANIMATION KEYFRAMES
+   ═══════════════════════════════════════════ */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.55 0.2 259 / 0.3); }
+  50%      { box-shadow: 0 0 12px 4px oklch(0.55 0.2 259 / 0.08); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* ═══════════════════════════════════════════
+   ANIMATION UTILITY CLASSES
+   ═══════════════════════════════════════════ */
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out both;
+}
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out both;
+}
+.animate-scale-in {
+  animation: scaleIn 0.35s ease-out both;
+}
+.animate-slide-in-left {
+  animation: slideInLeft 0.4s ease-out both;
+}
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+.animate-pulse-glow {
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+/* Shimmer skeleton effect */
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--muted) 25%,
+    oklch(0.85 0.005 0) 37%,
+    var(--muted) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+.dark .animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--muted) 25%,
+    oklch(0.35 0.01 259) 37%,
+    var(--muted) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* Stagger delay classes */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+
+/* ═══════════════════════════════════════════
+   GLASSMORPHISM & EFFECTS
+   ═══════════════════════════════════════════ */
+
+.glass {
+  background: oklch(1 0 0 / 0.6);
+  backdrop-filter: blur(12px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
+  border: 1px solid oklch(0.9 0.005 0 / 0.5);
+}
+.dark .glass {
+  background: oklch(0.18 0.01 259 / 0.6);
+  border-color: oklch(0.3 0.01 259 / 0.4);
+}
+
+/* Premium card hover effect */
+.card-hover {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 25px -5px oklch(0 0 0 / 0.08),
+    0 4px 10px -3px oklch(0 0 0 / 0.04);
+}
+.dark .card-hover:hover {
+  box-shadow:
+    0 8px 25px -5px oklch(0 0 0 / 0.3),
+    0 4px 10px -3px oklch(0 0 0 / 0.2);
+}
+
+/* Gradient accent top border for cards */
+.card-accent-top {
+  position: relative;
+  overflow: hidden;
+}
+.card-accent-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, oklch(0.55 0.2 259), oklch(0.65 0.2 150));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.card-accent-top:hover::before {
+  opacity: 1;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Accessibility: respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
