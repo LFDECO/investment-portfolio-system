@@ -1,0 +1,70 @@
+[project]
+name = "quant-trading-sim"
+version = "0.1.0"
+description = "Event-driven quantitative trading simulation for Indian equities"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+dependencies = [
+    # Data ingestion & network
+    "yfinance>=0.2.40",
+    "feedparser>=6.0",
+    "beautifulsoup4>=4.12",
+    "httpx>=0.27",
+    "pytz>=2024.1",
+    "python-dateutil>=2.9",
+
+    # Core data structures & validation
+    "pydantic>=2.7",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "scipy>=1.12",
+
+    # NLP Sentiment
+    "transformers>=4.40",
+    "torch>=2.2",
+
+    # Simulation environment & RL
+    "gymnasium>=0.29",
+    "stable-baselines3>=2.3",
+
+    # Analytics & reporting
+    "matplotlib>=3.8",
+    "quantstats>=0.0.62",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.10",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "A", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"

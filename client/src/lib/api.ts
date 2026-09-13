@@ -79,12 +79,22 @@ export type MarketStockDto = {
 };
 
 export type MarketHistoryPointDto = {
+  time?: number;
   date: string;
   open: number;
   high: number;
   low: number;
   close: number;
   volume: number | null;
+};
+
+export type MarketStatusDto = {
+  isOpen: boolean;
+  status: "OPEN" | "CLOSED";
+  statusText: string;
+  badge: "live" | "closed";
+  message: string;
+  asOf: string;
 };
 
 export type MarketHistoryDto = {
@@ -114,6 +124,10 @@ export type WatchlistItemDto = {
   asset_name: string;
   ticker_symbol: string;
 };
+
+export function fetchMarketStatus() {
+  return apiRequest<MarketStatusDto>("/api/v1/market/status");
+}
 
 export function fetchDefaultPortfolio() {
   return apiRequest<PortfolioDto>("/api/v1/portfolio/default");

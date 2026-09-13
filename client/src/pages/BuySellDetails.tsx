@@ -3,9 +3,9 @@ import { useLocation } from 'wouter';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Radio } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import CandlestickChart from '@/components/CandlestickChart';
 import {
   buyAsset,
   fetchDefaultPortfolio,
@@ -44,6 +44,7 @@ export default function BuySellDetails() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [priceFlash, setPriceFlash] = useState<'up' | 'down' | null>(null);
 
   const toAsset = (asset: MarketStockDto): Asset => ({
     id: asset.asset_id,
@@ -82,7 +83,7 @@ export default function BuySellDetails() {
   }, [assetId]);
 
   useEffect(() => {
-    if (!selectedAsset) return;
+    if (!selectedAsset?.id) return;
     let active = true;
     (async () => {
       setHistoryLoading(true);
@@ -100,7 +101,38 @@ export default function BuySellDetails() {
     return () => {
       active = false;
     };
-  }, [selectedAsset, historyDays]);
+  }, [selectedAsset?.id, selectedAsset?.ticker, historyDays]);
+
+  // Live polling for price tick updates (every 10 seconds)
+  useEffect(() => {
+    if (!selectedAsset?.id) return;
+    const interval = setInterval(async () => {
+      try {
+        const snapshot = await fetchMarketAsset(selectedAsset.id, selectedAsset.ticker);
+        if (typeof snapshot.current_price === 'number') {
+          const newPrice = snapshot.current_price;
+          setSelectedAsset(prev => {
+            if (!prev) return null;
+            if (prev.currentPrice !== null && Math.abs(newPrice - prev.currentPrice) > 0.01) {
+              setPriceFlash(newPrice > prev.currentPrice ? 'up' : 'down');
+              setTimeout(() => setPriceFlash(null), 800);
+            }
+            return {
+              ...prev,
+              currentPrice: newPrice,
+              change: snapshot.change,
+              changePercent: snapshot.change_percent,
+              volume: snapshot.volume,
+            };
+          });
+        }
+      } catch {
+        // Silently ignore background polling errors
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [selectedAsset?.id, selectedAsset?.ticker]);
 
   const holdingQuantity = useMemo(() => {
     if (!portfolio || !selectedAsset) return 0;
@@ -115,8 +147,8 @@ export default function BuySellDetails() {
       ? latestHistoryPoint.close - previousHistoryPoint.close
       : null;
   const selectedDailyChangePercent =
-    latestHistoryPoint && previousHistoryPoint && previousHistoryPoint.close > 0
-      ? (selectedDailyChange! / previousHistoryPoint.close) * 100
+    selectedDailyChange !== null && previousHistoryPoint && previousHistoryPoint.close > 0
+      ? (selectedDailyChange / previousHistoryPoint.close) * 100
       : null;
   const historyHigh = historyPoints.length ? Math.max(...historyPoints.map(point => point.high)) : null;
   const historyLow = historyPoints.length ? Math.min(...historyPoints.map(point => point.low)) : null;
@@ -195,8 +227,21 @@ export default function BuySellDetails() {
                 <p className="text-muted-foreground">{selectedAsset.name}</p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-foreground">{displayPrice !== null ? formatInr(displayPrice) : '--'}</p>
-                <p className={selectedAsset.changePercent >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+                <div className="flex items-center justify-end gap-2">
+                  <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Live Market Feed" />
+                  <p
+                    className={`text-2xl font-bold font-mono transition-colors duration-500 ${
+                      priceFlash === 'up'
+                        ? 'text-emerald-400 bg-emerald-500/10 px-2 rounded'
+                        : priceFlash === 'down'
+                          ? 'text-red-400 bg-red-500/10 px-2 rounded'
+                          : 'text-foreground'
+                    }`}
+                  >
+                    {displayPrice !== null ? formatInr(displayPrice) : '--'}
+                  </p>
+                </div>
+                <p className={`text-sm font-semibold mt-1 ${selectedAsset.changePercent >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                   {selectedAsset.changePercent >= 0 ? '+' : ''}
                   {selectedAsset.changePercent.toFixed(2)}%
                 </p>
@@ -236,33 +281,45 @@ export default function BuySellDetails() {
               </div>
             </div>
 
-            <div className="flex gap-2">
-              {[7, 30, 90].map(days => (
-                <Button
-                  key={days}
-                  size="sm"
-                  variant={historyDays === days ? 'default' : 'outline'}
-                  onClick={() => setHistoryDays(days)}
-                  disabled={historyLoading}
-                >
-                  {days}D
-                </Button>
-              ))}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+              <div className="flex flex-wrap gap-1.5 bg-muted/60 p-1 rounded-lg">
+                {[
+                  { days: 1, label: '1D (5m)' },
+                  { days: 7, label: '1W (15m)' },
+                  { days: 30, label: '1M' },
+                  { days: 90, label: '3M' },
+                  { days: 365, label: '1Y' },
+                ].map(item => (
+                  <Button
+                    key={item.days}
+                    size="sm"
+                    variant={historyDays === item.days ? 'default' : 'ghost'}
+                    onClick={() => setHistoryDays(item.days)}
+                    disabled={historyLoading}
+                    className="h-8 text-xs font-medium"
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-emerald-500" /> Bullish Candle
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-2.5 h-2.5 rounded-sm bg-red-500" /> Bearish Candle
+                </span>
+              </div>
             </div>
 
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={historyPoints}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} domain={['auto', 'auto']} />
-                  <Tooltip formatter={(value: number, name: string) => [formatInr(value), name]} labelFormatter={(value) => `Date: ${value}`} />
-                  <Line type="monotone" dataKey="close" stroke="var(--primary)" strokeWidth={2} dot={false} name="Close" />
-                  <Line type="monotone" dataKey="high" stroke="var(--chart-2)" strokeWidth={1.5} dot={false} name="High" />
-                  <Line type="monotone" dataKey="low" stroke="var(--chart-5)" strokeWidth={1.5} dot={false} name="Low" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <CandlestickChart
+              data={historyPoints}
+              height={380}
+              loading={historyLoading}
+              currentLivePrice={selectedAsset.currentPrice}
+              ticker={selectedAsset.ticker}
+            />
           </Card>
 
           <Card className="p-6 animate-fade-in-up stagger-2 card-hover">

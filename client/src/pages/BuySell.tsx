@@ -4,9 +4,15 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, Radio } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-import { fetchMarketDaily, fetchTrendingStocks, type MarketStockDto } from '@/lib/api';
+import {
+  fetchMarketDaily,
+  fetchTrendingStocks,
+  fetchMarketStatus,
+  type MarketStockDto,
+  type MarketStatusDto,
+} from '@/lib/api';
 
 interface Asset {
   id: number;
@@ -30,6 +36,7 @@ export default function BuySell() {
   const [loading, setLoading] = useState(true);
   const [marketLoading, setMarketLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [marketStatus, setMarketStatus] = useState<MarketStatusDto | null>(null);
 
   const toAsset = (asset: MarketStockDto): Asset => ({
     id: asset.asset_id,
@@ -46,19 +53,20 @@ export default function BuySell() {
   const loadMarketData = async (nextTrendType: TrendType = trendType) => {
     setMarketLoading(true);
     try {
-      const [dailyRows, trendingRows] = await Promise.all([
-        fetchMarketDaily({ limit: 500 }),
-        fetchTrendingStocks({ type: nextTrendType, limit: 10 }),
+      const [trendingRows, status] = await Promise.all([
+        fetchTrendingStocks({ type: nextTrendType, limit: 30 }),
+        fetchMarketStatus().catch(() => null),
       ]);
-      const mappedDaily = dailyRows.map(toAsset);
-      const mappedTrending = trendingRows.map(toAsset);
-      const merged = mappedTrending.length > 0 ? mappedTrending : mappedDaily;
-      setAssets(merged);
+      if (status) setMarketStatus(status);
+      setAssets(trendingRows.map(toAsset));
       setError(null);
     } catch {
-      const fallbackRows = await fetchMarketDaily({ limit: 200 });
-      setAssets(fallbackRows.map(toAsset));
-      setError('Live market feed unavailable right now; showing available tradable assets.');
+      try {
+        const fallbackRows = await fetchMarketDaily({ limit: 100 });
+        setAssets(fallbackRows.map(toAsset));
+      } catch {
+        setError('Market data temporarily unavailable. Please click Refresh.');
+      }
     } finally {
       setMarketLoading(false);
     }
@@ -85,6 +93,16 @@ export default function BuySell() {
     if (loading) return;
     loadMarketData(trendType);
   }, [trendType]);
+
+  // Live auto-refresh polling every 20 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!document.hidden && !searchTerm.trim()) {
+        loadMarketData(trendType);
+      }
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [trendType, searchTerm]);
 
   useEffect(() => {
     const term = searchTerm.trim();
@@ -115,10 +133,22 @@ export default function BuySell() {
     };
   }, [searchTerm]);
 
+  // Strict sorting guarantee by chosen tab
   const visibleAssets = useMemo(() => {
     if (searchTerm.trim()) return searchResults;
-    return assets;
-  }, [assets, searchResults, searchTerm]);
+
+    const list = [...assets];
+    if (trendType === 'gainers') {
+      return list.sort((a, b) => b.changePercent - a.changePercent);
+    }
+    if (trendType === 'losers') {
+      return list.sort((a, b) => a.changePercent - b.changePercent);
+    }
+    if (trendType === 'active') {
+      return list.sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0));
+    }
+    return list;
+  }, [assets, searchResults, searchTerm, trendType]);
 
   return (
     <div className="space-y-8">
@@ -132,9 +162,27 @@ export default function BuySell() {
 
       <Card className="p-6 space-y-4 animate-fade-in-up stagger-1 card-hover">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-foreground">Previous Days Data</h2>
-            <p className="text-sm text-muted-foreground">Stock list with latest prices. Click a stock to open details.</p>
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-bold text-foreground">
+                {marketStatus?.isOpen ? 'Live Market Feed' : 'Market Summary'}
+              </h2>
+              {marketStatus?.isOpen ? (
+                <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 gap-1.5 py-0.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  NSE LIVE
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-amber-400 border-amber-500/30 gap-1.5 py-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  Market Closed
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {marketStatus?.message || 'Stock list with latest prices. Click a stock to open details.'}
+              {marketStatus?.asOf ? ` • As of ${marketStatus.asOf}` : ''}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {([

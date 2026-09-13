@@ -24,6 +24,7 @@ type QuoteSnapshot = {
 };
 
 type HistoricalPoint = {
+  time: number;
   date: string;
   open: number;
   high: number;
@@ -33,44 +34,149 @@ type HistoricalPoint = {
 };
 
 const DEFAULT_MARKET_SYMBOLS = [
-  "AAPL",
-  "MSFT",
-  "GOOGL",
-  "AMZN",
-  "NVDA",
-  "TSLA",
-  "META",
-  "NFLX",
-  "JPM",
-  "BAC",
   "RELIANCE.NS",
   "TCS.NS",
   "INFY.NS",
   "HDFCBANK.NS",
   "ICICIBANK.NS",
+  "AAPL",
+  "MSFT",
+  "GOOGL",
+  "AMZN",
+  "NVDA",
 ];
-const NSE_CORE_SYMBOLS = [
-  "ITC.NS",
-  "SBIN.NS",
-  "HINDUNILVR.NS",
-  "LT.NS",
-  "AXISBANK.NS",
-  "BAJFINANCE.NS",
-  "BHARTIARTL.NS",
-  "KOTAKBANK.NS",
-  "MARUTI.NS",
-  "SUNPHARMA.NS",
-  "TITAN.NS",
-  "ULTRACEMCO.NS",
-  "WIPRO.NS",
-  "ASIANPAINT.NS",
-  "ADANIENT.NS",
-  "NTPC.NS",
-  "POWERGRID.NS",
-  "ONGC.NS",
-  "TATAMOTORS.NS",
-  "HCLTECH.NS",
+
+export const NIFTY_LIQUID_UNIVERSE = [
+  { symbol: "RELIANCE.NS", name: "Reliance Industries Ltd" },
+  { symbol: "TCS.NS", name: "Tata Consultancy Services Ltd" },
+  { symbol: "HDFCBANK.NS", name: "HDFC Bank Ltd" },
+  { symbol: "INFY.NS", name: "Infosys Ltd" },
+  { symbol: "ICICIBANK.NS", name: "ICICI Bank Ltd" },
+  { symbol: "BHARTIARTL.NS", name: "Bharti Airtel Ltd" },
+  { symbol: "SBIN.NS", name: "State Bank of India" },
+  { symbol: "ITC.NS", name: "ITC Ltd" },
+  { symbol: "LT.NS", name: "Larsen & Toubro Ltd" },
+  { symbol: "HINDUNILVR.NS", name: "Hindustan Unilever Ltd" },
+  { symbol: "BAJFINANCE.NS", name: "Bajaj Finance Ltd" },
+  { symbol: "MARUTI.NS", name: "Maruti Suzuki India Ltd" },
+  { symbol: "M&M.NS", name: "Mahindra & Mahindra Ltd" },
+  { symbol: "SUNPHARMA.NS", name: "Sun Pharmaceutical Industries Ltd" },
+  { symbol: "TITAN.NS", name: "Titan Company Ltd" },
+  { symbol: "ADANIENT.NS", name: "Adani Enterprises Ltd" },
+  { symbol: "ADANIPORTS.NS", name: "Adani Ports and Special Economic Zone Ltd" },
+  { symbol: "ULTRACEMCO.NS", name: "UltraTech Cement Ltd" },
+  { symbol: "AXISBANK.NS", name: "Axis Bank Ltd" },
+  { symbol: "KOTAKBANK.NS", name: "Kotak Mahindra Bank Ltd" },
+  { symbol: "NTPC.NS", name: "NTPC Ltd" },
+  { symbol: "ONGC.NS", name: "Oil & Natural Gas Corporation Ltd" },
+  { symbol: "POWERGRID.NS", name: "Power Grid Corporation of India Ltd" },
+  { symbol: "TATASTEEL.NS", name: "Tata Steel Ltd" },
+  { symbol: "TMPV.NS", name: "Tata Motors Passenger Vehicles Ltd" },
+  { symbol: "JSWSTEEL.NS", name: "JSW Steel Ltd" },
+  { symbol: "COALINDIA.NS", name: "Coal India Ltd" },
+  { symbol: "CIPLA.NS", name: "Cipla Ltd" },
+  { symbol: "TECHM.NS", name: "Tech Mahindra Ltd" },
+  { symbol: "HCLTECH.NS", name: "HCL Technologies Ltd" },
+  { symbol: "DRREDDY.NS", name: "Dr. Reddy's Laboratories Ltd" },
+  { symbol: "GRASIM.NS", name: "Grasim Industries Ltd" },
+  { symbol: "EICHERMOT.NS", name: "Eicher Motors Ltd" },
+  { symbol: "NESTLEIND.NS", name: "Nestle India Ltd" },
+  { symbol: "BRITANNIA.NS", name: "Britannia Industries Ltd" },
+  { symbol: "APOLLOHOSP.NS", name: "Apollo Hospitals Enterprise Ltd" },
+  { symbol: "BPCL.NS", name: "Bharat Petroleum Corporation Ltd" },
+  { symbol: "HEROMOTOCO.NS", name: "Hero MotoCorp Ltd" },
+  { symbol: "SHREECEM.NS", name: "Shree Cement Ltd" },
+  { symbol: "TATACONSUM.NS", name: "Tata Consumer Products Ltd" },
+  { symbol: "DIVISLAB.NS", name: "Divi's Laboratories Ltd" },
+  { symbol: "SBILIFE.NS", name: "SBI Life Insurance Company Ltd" },
+  { symbol: "HDFCLIFE.NS", name: "HDFC Life Insurance Company Ltd" },
+  { symbol: "BAJAJFINSV.NS", name: "Bajaj Finserv Ltd" },
+  { symbol: "BAJAJ-AUTO.NS", name: "Bajaj Auto Ltd" },
+  { symbol: "ASIANPAINT.NS", name: "Asian Paints Ltd" },
+  { symbol: "WIPRO.NS", name: "Wipro Ltd" },
+  { symbol: "BEL.NS", name: "Bharat Electronics Ltd" },
+  { symbol: "TRENT.NS", name: "Trent Ltd" },
+  { symbol: "ETERNAL.NS", name: "Eternal Ltd (Zomato)" },
+  { symbol: "JIOFIN.NS", name: "Jio Financial Services Ltd" },
+  { symbol: "HAL.NS", name: "Hindustan Aeronautics Ltd" },
+  { symbol: "VBL.NS", name: "Varun Beverages Ltd" },
+  { symbol: "DLF.NS", name: "DLF Ltd" },
+  { symbol: "CHOLAFIN.NS", name: "Cholamandalam Investment and Finance Company Ltd" },
+  { symbol: "SIEMENS.NS", name: "Siemens Ltd" },
+  { symbol: "ABB.NS", name: "ABB India Ltd" },
+  { symbol: "PFC.NS", name: "Power Finance Corporation Ltd" },
+  { symbol: "RECLTD.NS", name: "REC Ltd" },
+  { symbol: "GAIL.NS", name: "GAIL (India) Ltd" },
+  { symbol: "BHEL.NS", name: "Bharat Heavy Electricals Ltd" },
+  { symbol: "TVSMOTOR.NS", name: "TVS Motor Company Ltd" },
+  { symbol: "VEDL.NS", name: "Vedanta Ltd" },
+  { symbol: "INDHOTEL.NS", name: "The Indian Hotels Company Ltd" },
+  { symbol: "MOTHERSON.NS", name: "Samvardhana Motherson International Ltd" },
+  { symbol: "PIDILITIND.NS", name: "Pidilite Industries Ltd" },
+  { symbol: "IRCTC.NS", name: "Indian Railway Catering and Tourism Corp Ltd" },
+  { symbol: "SUZLON.NS", name: "Suzlon Energy Ltd" },
+  { symbol: "IDEA.NS", name: "Vodafone Idea Ltd" },
+  { symbol: "YESBANK.NS", name: "Yes Bank Ltd" },
+  { symbol: "PNB.NS", name: "Punjab National Bank" },
+  { symbol: "BANKBARODA.NS", name: "Bank of Baroda" },
+  { symbol: "CANBK.NS", name: "Canara Bank" },
+  { symbol: "IDFCFIRSTB.NS", name: "IDFC First Bank Ltd" },
+  { symbol: "NHPC.NS", name: "NHPC Ltd" },
+  { symbol: "IOB.NS", name: "Indian Overseas Bank" },
+  { symbol: "UNIONBANK.NS", name: "Union Bank of India" },
+  { symbol: "SAIL.NS", name: "Steel Authority of India Ltd" },
+  { symbol: "FEDERALBNK.NS", name: "The Federal Bank Ltd" },
 ];
+
+const NSE_CORE_SYMBOLS = NIFTY_LIQUID_UNIVERSE.map(item => item.symbol);
+
+export function getIndianMarketStatus(): {
+  isOpen: boolean;
+  status: "OPEN" | "CLOSED";
+  statusText: string;
+  badge: "live" | "closed";
+  message: string;
+  asOf: string;
+} {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const ist = new Date(utc + 3600000 * 5.5);
+
+  const day = ist.getDay(); // 0 = Sun, 6 = Sat
+  const hour = ist.getHours();
+  const minute = ist.getMinutes();
+  const totalMinutes = hour * 60 + minute;
+
+  const isWeekday = day >= 1 && day <= 5;
+  const isMarketHours = totalMinutes >= 9 * 60 + 15 && totalMinutes < 15 * 60 + 30;
+  const isOpen = isWeekday && isMarketHours;
+
+  const formattedTime = ist.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  if (isOpen) {
+    return {
+      isOpen: true,
+      status: "OPEN",
+      statusText: "NSE Live Market",
+      badge: "live",
+      message: "Market is Open • Live Trading (09:15 - 15:30 IST)",
+      asOf: formattedTime,
+    };
+  }
+
+  return {
+    isOpen: false,
+    status: "CLOSED",
+    statusText: "Market Closed",
+    badge: "closed",
+    message: "Market Closed • Last Session Close at 15:30 IST",
+    asOf: formattedTime,
+  };
+}
 const YAHOO_QUOTE_BATCH_SIZE = 40;
 const DEFAULT_USD_INR_RATE = 83;
 const NSE_UNIVERSE_URL = "https://archives.nseindia.com/content/equities/EQUITY_L.csv";
@@ -142,15 +248,33 @@ function convertPriceToInr(price: number, currency: string | null, usdInrRate: n
   return price;
 }
 
+interface CachedQuote {
+  snapshot: QuoteSnapshot;
+  cachedAt: number;
+}
+const quoteCache = new Map<string, CachedQuote>();
+const QUOTE_CACHE_TTL_MS = 20_000; // 20s cache TTL
+
+let cachedUsdInrRate: { rate: number; cachedAt: number } | null = null;
+const USD_INR_CACHE_TTL_MS = 60_000 * 5; // 5 min cache TTL
+
 async function fetchUsdInrRate(): Promise<number> {
+  const now = Date.now();
+  if (cachedUsdInrRate && now - cachedUsdInrRate.cachedAt < USD_INR_CACHE_TTL_MS) {
+    return cachedUsdInrRate.rate;
+  }
   try {
     const { data } = await axios.get(
-      "https://query1.finance.yahoo.com/v7/finance/quote?symbols=USDINR=X",
-      { timeout: 8000 }
+      "https://query1.finance.yahoo.com/v8/finance/chart/USDINR=X?range=1d&interval=1d",
+      {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+        timeout: 6000,
+      }
     );
-    const row = data?.quoteResponse?.result?.[0];
-    const price = row?.regularMarketPrice;
+    const meta = data?.chart?.result?.[0]?.meta;
+    const price = meta?.regularMarketPrice;
     if (typeof price === "number" && Number.isFinite(price) && price > 0) {
+      cachedUsdInrRate = { rate: price, cachedAt: now };
       return price;
     }
   } catch {
@@ -166,83 +290,97 @@ async function fetchLiveQuoteSnapshots(
   if (uniqueSymbols.length === 0) return new Map();
 
   const map = new Map<string, QuoteSnapshot>();
-  const usdInrRate = await fetchUsdInrRate();
-  for (let i = 0; i < uniqueSymbols.length; i += YAHOO_QUOTE_BATCH_SIZE) {
-    const chunk = uniqueSymbols.slice(i, i + YAHOO_QUOTE_BATCH_SIZE);
-    if (chunk.length === 0) continue;
+  const needed: string[] = [];
+  const now = Date.now();
 
-    try {
-      const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(
-        chunk.join(",")
-      )}`;
-      const { data } = await axios.get(url, { timeout: 8000 });
-      const rows = data?.quoteResponse?.result;
-      if (!Array.isArray(rows)) continue;
-
-      for (const row of rows) {
-        const symbol = row?.symbol;
-        const currencyRaw =
-          typeof row?.currency === "string" && row.currency
-            ? row.currency
-            : typeof symbol === "string"
-              ? inferCurrencyFromSymbol(symbol)
-              : null;
-        const price = row?.regularMarketPrice;
-        const previousClose = row?.regularMarketPreviousClose;
-        const normalizedPreviousClose =
-          typeof previousClose === "number" && Number.isFinite(previousClose)
-            ? convertPriceToInr(previousClose, currencyRaw, usdInrRate)
-            : null;
-        const effectivePrice =
-          typeof price === "number" && Number.isFinite(price)
-            ? convertPriceToInr(price, currencyRaw, usdInrRate)
-            : normalizedPreviousClose;
-        if (
-          typeof symbol === "string" &&
-          typeof effectivePrice === "number" &&
-          Number.isFinite(effectivePrice)
-        ) {
-          const inferredChange =
-            normalizedPreviousClose !== null
-              ? effectivePrice - normalizedPreviousClose
-              : 0;
-          const inferredChangePercent =
-            normalizedPreviousClose && normalizedPreviousClose > 0
-              ? (inferredChange / normalizedPreviousClose) * 100
-              : 0;
-
-          map.set(symbol, {
-            price: effectivePrice,
-            previousClose: normalizedPreviousClose,
-            change:
-              typeof row?.regularMarketChange === "number" &&
-                Number.isFinite(row.regularMarketChange)
-                ? convertPriceToInr(row.regularMarketChange, currencyRaw, usdInrRate)
-                : inferredChange,
-            changePercent:
-              typeof row?.regularMarketChangePercent === "number" &&
-                Number.isFinite(row.regularMarketChangePercent)
-                ? row.regularMarketChangePercent
-                : inferredChangePercent,
-            volume:
-              typeof row?.regularMarketVolume === "number"
-                ? row.regularMarketVolume
-                : null,
-            marketState:
-              typeof row?.marketState === "string" ? row.marketState : null,
-            marketTime:
-              typeof row?.regularMarketTime === "number"
-                ? row.regularMarketTime
-                : null,
-            currency: currencyRaw ?? null,
-          });
-        }
-      }
-    } catch {
-      // Continue with other chunks so one failed request does not blank the whole page.
+  for (const sym of uniqueSymbols) {
+    const cached = quoteCache.get(sym);
+    if (cached && now - cached.cachedAt < QUOTE_CACHE_TTL_MS) {
+      map.set(sym, cached.snapshot);
+    } else {
+      needed.push(sym);
     }
   }
 
+  if (needed.length === 0) {
+    return map;
+  }
+
+  const usdInrRate = await fetchUsdInrRate();
+  const queue = [...needed];
+  const concurrency = 16;
+  const workers = Array.from({ length: concurrency }).map(async () => {
+    while (queue.length > 0) {
+      const sym = queue.shift();
+      if (!sym) break;
+      try {
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
+          sym
+        )}?range=1d&interval=1d`;
+        const { data } = await axios.get(url, {
+          headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+          timeout: 4500,
+        });
+        const meta = data?.chart?.result?.[0]?.meta;
+        if (!meta) continue;
+
+        const price = meta.regularMarketPrice;
+        if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) {
+          continue;
+        }
+
+        const currencyRaw =
+          typeof meta.currency === "string" && meta.currency
+            ? meta.currency
+            : inferCurrencyFromSymbol(sym);
+
+        const prevClose =
+          typeof meta.chartPreviousClose === "number" && Number.isFinite(meta.chartPreviousClose)
+            ? meta.chartPreviousClose
+            : typeof meta.previousClose === "number" && Number.isFinite(meta.previousClose)
+              ? meta.previousClose
+              : price;
+
+        const rawChange =
+          typeof meta.fulldayChange === "number" && Number.isFinite(meta.fulldayChange)
+            ? meta.fulldayChange
+            : typeof meta.regularMarketChange === "number" && Number.isFinite(meta.regularMarketChange)
+              ? meta.regularMarketChange
+              : price - prevClose;
+
+        const rawChangePercent =
+          typeof meta.regularMarketChangePercent === "number" && Number.isFinite(meta.regularMarketChangePercent)
+            ? meta.regularMarketChangePercent
+            : typeof meta.fulldayChangePercent === "number" && Number.isFinite(meta.fulldayChangePercent)
+              ? meta.fulldayChangePercent
+              : prevClose > 0
+                ? ((price - prevClose) / prevClose) * 100
+                : 0;
+
+        const effectivePrice = convertPriceToInr(price, currencyRaw, usdInrRate);
+        const effectivePrevClose = convertPriceToInr(prevClose, currencyRaw, usdInrRate);
+        const effectiveChange = convertPriceToInr(rawChange, currencyRaw, usdInrRate);
+
+        const snapshot: QuoteSnapshot = {
+          price: effectivePrice,
+          previousClose: effectivePrevClose,
+          change: effectiveChange,
+          changePercent: rawChangePercent,
+          volume: typeof meta.regularMarketVolume === "number" ? meta.regularMarketVolume : null,
+          marketState: meta.currentTradingPeriod?.regular ? "REGULAR" : "CLOSED",
+          marketTime: typeof meta.regularMarketTime === "number" ? meta.regularMarketTime : null,
+          currency: currencyRaw ?? "INR",
+        };
+
+        quoteCache.set(sym, { snapshot, cachedAt: Date.now() });
+        map.set(sym, snapshot);
+      } catch {
+        // Individual ticker network failures ignored
+      }
+    }
+  });
+
+  await Promise.all(workers);
   return map;
 }
 
@@ -376,95 +514,6 @@ async function enrichMissingQuotesWithHistory(
   return merged;
 }
 
-async function fetchYahooQuoteRows(symbols: string[]) {
-  const uniqueSymbols = Array.from(new Set(symbols.filter(Boolean)));
-  if (uniqueSymbols.length === 0) return [] as Array<{
-    symbol: string;
-    name: string;
-    snapshot: QuoteSnapshot;
-  }>;
-
-  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(
-    uniqueSymbols.join(",")
-  )}`;
-  const { data } = await axios.get(url, { timeout: 8000 });
-  const rows = data?.quoteResponse?.result;
-  if (!Array.isArray(rows)) return [];
-
-  const payload: Array<{
-    symbol: string;
-    name: string;
-    snapshot: QuoteSnapshot;
-  }> = [];
-
-  for (const row of rows) {
-    const symbol = typeof row?.symbol === "string" ? row.symbol : null;
-    const rawName =
-      (typeof row?.longName === "string" && row.longName) ||
-      (typeof row?.shortName === "string" && row.shortName) ||
-      symbol ||
-      "Unknown Asset";
-
-    const price = row?.regularMarketPrice;
-    const previousClose = row?.regularMarketPreviousClose;
-    const normalizedPreviousClose =
-      typeof previousClose === "number" && Number.isFinite(previousClose)
-        ? previousClose
-        : null;
-    const effectivePrice =
-      typeof price === "number" && Number.isFinite(price)
-        ? price
-        : normalizedPreviousClose;
-
-    if (!symbol || typeof effectivePrice !== "number" || !Number.isFinite(effectivePrice)) {
-      continue;
-    }
-
-    const inferredChange =
-      normalizedPreviousClose !== null
-        ? effectivePrice - normalizedPreviousClose
-        : 0;
-    const inferredChangePercent =
-      normalizedPreviousClose && normalizedPreviousClose > 0
-        ? (inferredChange / normalizedPreviousClose) * 100
-        : 0;
-
-    payload.push({
-      symbol,
-      name: rawName,
-      snapshot: {
-        price: effectivePrice,
-        previousClose: normalizedPreviousClose,
-        change:
-          typeof row?.regularMarketChange === "number" &&
-            Number.isFinite(row.regularMarketChange)
-            ? row.regularMarketChange
-            : inferredChange,
-        changePercent:
-          typeof row?.regularMarketChangePercent === "number" &&
-            Number.isFinite(row.regularMarketChangePercent)
-            ? row.regularMarketChangePercent
-            : inferredChangePercent,
-        volume:
-          typeof row?.regularMarketVolume === "number"
-            ? row.regularMarketVolume
-            : null,
-        marketState:
-          typeof row?.marketState === "string" ? row.marketState : null,
-        marketTime:
-          typeof row?.regularMarketTime === "number"
-            ? row.regularMarketTime
-            : null,
-        currency:
-          typeof row?.currency === "string" && row.currency
-            ? row.currency
-            : inferCurrencyFromSymbol(symbol),
-      },
-    });
-  }
-
-  return payload;
-}
 
 async function searchYahooNseSymbols(query: string): Promise<string[]> {
   const q = query.trim();
@@ -696,25 +745,31 @@ async function resolveAssetSnapshot(
   return enriched.get(symbol) ?? null;
 }
 
-function getYahooRangeForDays(days: number): string {
-  if (days <= 30) return "1mo";
-  if (days <= 90) return "3mo";
-  if (days <= 180) return "6mo";
-  if (days <= 365) return "1y";
-  return "2y";
+function getYahooRangeAndIntervalForDays(days: number): { range: string; interval: string } {
+  if (days <= 1) return { range: "1d", interval: "5m" }; // 5-minute intraday candles for 1D
+  if (days <= 7) return { range: "5d", interval: "15m" }; // 15-minute candles for 1W
+  if (days <= 30) return { range: "1mo", interval: "1d" };
+  if (days <= 90) return { range: "3mo", interval: "1d" };
+  if (days <= 180) return { range: "6mo", interval: "1d" };
+  if (days <= 365) return { range: "1y", interval: "1d" };
+  return { range: "2y", interval: "1wk" };
 }
 
 async function fetchHistoricalPrices(
   symbol: string,
   days: number
 ): Promise<HistoricalPoint[]> {
-  const range = getYahooRangeForDays(days);
+  const { range, interval } = getYahooRangeAndIntervalForDays(days);
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(
     symbol
-  )}?range=${range}&interval=1d`;
+  )}?range=${range}&interval=${interval}`;
 
-  const { data } = await axios.get(url, { timeout: 8000 });
+  const { data } = await axios.get(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+    timeout: 8000,
+  });
   const result = data?.chart?.result?.[0];
+  const meta = result?.meta;
   const timestamps = result?.timestamp;
   const quote = result?.indicators?.quote?.[0];
   if (!Array.isArray(timestamps) || !quote) return [];
@@ -722,11 +777,26 @@ async function fetchHistoricalPrices(
   const rows: HistoricalPoint[] = [];
   for (let i = 0; i < timestamps.length; i += 1) {
     const ts = timestamps[i];
-    const open = quote?.open?.[i];
-    const high = quote?.high?.[i];
-    const low = quote?.low?.[i];
-    const close = quote?.close?.[i];
+    let open = quote?.open?.[i];
+    let high = quote?.high?.[i];
+    let low = quote?.low?.[i];
+    let close = quote?.close?.[i];
     const volume = quote?.volume?.[i];
+
+    // Handle unfinalized daily candle where close is null but meta has the latest market price
+    if (i === timestamps.length - 1 && (typeof close !== "number" || !Number.isFinite(close))) {
+      const metaPrice = meta?.regularMarketPrice;
+      if (typeof metaPrice === "number" && Number.isFinite(metaPrice)) {
+        close = metaPrice;
+        if (typeof open !== "number" || !Number.isFinite(open)) open = metaPrice;
+        if (typeof high !== "number" || !Number.isFinite(high)) {
+          high = typeof meta?.regularMarketDayHigh === "number" ? meta.regularMarketDayHigh : metaPrice;
+        }
+        if (typeof low !== "number" || !Number.isFinite(low)) {
+          low = typeof meta?.regularMarketDayLow === "number" ? meta.regularMarketDayLow : metaPrice;
+        }
+      }
+    }
 
     if (
       typeof ts !== "number" ||
@@ -739,6 +809,7 @@ async function fetchHistoricalPrices(
     }
 
     rows.push({
+      time: ts, // unix timestamp in seconds for lightweight-charts
       date: new Date(ts * 1000).toISOString().slice(0, 10),
       open,
       high,
@@ -748,7 +819,7 @@ async function fetchHistoricalPrices(
     });
   }
 
-  return rows.slice(-Math.max(1, days));
+  return rows;
 }
 
 async function ensureUserIdByEmail(
@@ -983,8 +1054,10 @@ export function registerSchemaApiRoutes(app: Express) {
 
   app.get("/api/v1/market/asset/:assetId", authMiddleware, async (req, res) => {
     try {
-      const assetId = Number(req.params.assetId);
-      const tickerSymbol = String(req.query.ticker_symbol ?? "").trim().toUpperCase();
+      const rawParam = String(req.params.assetId ?? "").trim().toUpperCase();
+      const assetId = Number(rawParam);
+      const tickerFromQuery = String(req.query.ticker_symbol ?? "").trim().toUpperCase();
+      const tickerSymbol = tickerFromQuery || (isNaN(assetId) ? rawParam : "");
 
       const hasAssetId = !isNaN(assetId) && assetId > 0;
       const hasTicker = tickerSymbol.length > 0;
@@ -997,7 +1070,7 @@ export function registerSchemaApiRoutes(app: Express) {
       const byTicker = tickerSymbol
         ? universe.find(row => row.symbol.toUpperCase() === tickerSymbol)
         : null;
-      const byId = !byTicker && assetId
+      const byId = !byTicker && hasAssetId
         ? universe.find(row => symbolToSyntheticId(row.symbol) === assetId)
         : null;
       const target = byTicker ?? byId;
@@ -1025,20 +1098,24 @@ export function registerSchemaApiRoutes(app: Express) {
     }
   });
 
+  app.get("/api/v1/market/status", (_req, res) => {
+    res.json(getIndianMarketStatus());
+  });
+
   app.get("/api/v1/market/trending", authMiddleware, async (req, res) => {
     try {
       const type = String(req.query.type ?? "gainers").toLowerCase();
-      const limitRaw = Number(req.query.limit ?? 10);
+      const limitRaw = Number(req.query.limit ?? 20);
       const limit = Number.isFinite(limitRaw)
-        ? Math.max(1, Math.min(10, Math.floor(limitRaw)))
-        : 10;
-      const universe = await getNseUniverseRows();
-      const candidateUniverse = universe.slice(0, 600);
-      const symbols = candidateUniverse.map(row => row.symbol);
+        ? Math.max(1, Math.min(50, Math.floor(limitRaw)))
+        : 20;
+
+      // Use our curated liquid Indian market universe spanning all sectors & letters
+      const symbols = NIFTY_LIQUID_UNIVERSE.map(row => row.symbol);
       let quotes = await fetchLiveQuoteSnapshots(symbols);
       quotes = await enrichMissingQuotesWithHistory(symbols, quotes);
 
-      const payload = candidateUniverse.map(row => {
+      const payload = NIFTY_LIQUID_UNIVERSE.map(row => {
         const quote = quotes.get(row.symbol);
         return {
           asset_id: symbolToSyntheticId(row.symbol),
@@ -1052,13 +1129,16 @@ export function registerSchemaApiRoutes(app: Express) {
           market_time: quote?.marketTime ?? null,
           currency: quote?.currency ?? "INR",
         };
-      });
+      }).filter(p => p.current_price !== null && Number.isFinite(p.current_price));
 
-      const sorted = [...payload].sort((a, b) => {
-        if (type === "losers") return a.change_percent - b.change_percent;
-        if (type === "active") return (b.volume ?? 0) - (a.volume ?? 0);
-        return b.change_percent - a.change_percent;
-      });
+      let sorted = [...payload];
+      if (type === "gainers") {
+        sorted = sorted.sort((a, b) => b.change_percent - a.change_percent);
+      } else if (type === "losers") {
+        sorted = sorted.sort((a, b) => a.change_percent - b.change_percent);
+      } else if (type === "active") {
+        sorted = sorted.sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0));
+      }
 
       res.json(sorted.slice(0, limit));
     } catch {
@@ -1068,17 +1148,19 @@ export function registerSchemaApiRoutes(app: Express) {
 
   app.get("/api/v1/market/history/:assetId", authMiddleware, async (req, res) => {
     try {
-      const assetId = Number(req.params.assetId);
+      const rawParam = String(req.params.assetId ?? "").trim().toUpperCase();
+      const assetId = Number(rawParam);
       const tickerFromQuery = String(req.query.ticker_symbol ?? "").trim().toUpperCase();
+      const tickerSymbol = tickerFromQuery || (isNaN(assetId) ? rawParam : "");
       const daysRaw = Number(req.query.days ?? 30);
       const days = Number.isFinite(daysRaw)
-        ? Math.max(5, Math.min(365, Math.floor(daysRaw)))
+        ? Math.max(1, Math.min(365, Math.floor(daysRaw)))
         : 30;
       const universe = await getNseUniverseRows();
-      const byTicker = tickerFromQuery
-        ? universe.find(row => row.symbol.toUpperCase() === tickerFromQuery)
+      const byTicker = tickerSymbol
+        ? universe.find(row => row.symbol.toUpperCase() === tickerSymbol)
         : null;
-      const byId = !byTicker && assetId
+      const byId = !byTicker && !isNaN(assetId) && assetId > 0
         ? universe.find(row => symbolToSyntheticId(row.symbol) === assetId)
         : null;
       const target = byTicker ?? byId;
