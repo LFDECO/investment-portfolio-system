@@ -50,43 +50,43 @@ flowchart TD
 
 ## 2. Master Phase & Skill Mapping Matrix
 
-| Phase | Description | Relevant Skills | Key Deliverables |
-|---|---|---|---|
-| **Phase 0** | **Subsystem Architecture & Python Bootstrap** | `python-project-bootstrap` | `pyproject.toml`, `uv` virtualenv, Pydantic v2 schemas, strict mypy/ruff |
-| **Phase 1** | **Free Market Data & Time-Series Alignment** | `indian-market-data-ingestion`, `look-ahead-bias-prevention` | `price_fetcher.py`, NSE trading calendar, IST timezone normalization |
-| **Phase 2** | **Alternative Data & News/Social Scraper** | `news-social-scraping-india`, `look-ahead-bias-prevention` | Scrapers (Moneycontrol, ET, Reddit `r/IndianStreetBets`), velocity tracker |
-| **Phase 3** | **FinBERT Sentiment Inference Pipeline** | `finbert-sentiment-engine`, `look-ahead-bias-prevention` | `ProsusAI/finbert` inference, NER ticker resolution, 3x rolling z-score trigger |
-| **Phase 4** | **Point-in-Time Technical Indicator Engine** | `technical-indicators-pipeline`, `look-ahead-bias-prevention` | Vectorized RSI, VWAP, Bollinger Bands, MACD, ATR, observation fusion |
-| **Phase 5** | **Farama Gymnasium Indian Market Environment** | `gymnasium-trading-env`, `look-ahead-bias-prevention` | Gymnasium `TradingEnv`, Indian slippage model, circuit breakers, EOD square-off |
-| **Phase 6** | **Autonomous Strategy Agents (Heuristic & RL)** | `trading-strategy-agents` | Heuristic baselines, Sentiment breakout agent, SB3 PPO/RecurrentPPO agent |
-| **Phase 7** | **Purged Walk-Forward Cross-Validation** | `backtest-walk-forward-validation`, `look-ahead-bias-prevention` | Purged CV with purge gaps, Indian market regime detection (NIFTY/VIX) |
-| **Phase 8** | **Trade Telemetry & Quant Analytics** | `trade-telemetry-analytics` | JSON per-trade trigger logs, Sharpe/Sortino/Drawdown, QuantStats HTML report |
-| **Phase 9** | **Portfolio.Ai Platform Integration & Cloud DB** | `python-project-bootstrap`, `building-data-apps` | Cloud DB migration (TiDB/Railway), FastAPI/bridge to TypeScript frontend |
+| Phase | Description | Relevant Skills | Key Deliverables | Status |
+|---|---|---|---|---|
+| **Phase 0** | **Subsystem Architecture & Python Bootstrap** | `python-project-bootstrap` | `pyproject.toml`, `uv` virtualenv, Pydantic v2 schemas, strict mypy/ruff | **Completed** ✅ |
+| **Phase 1** | **Free Market Data & Time-Series Alignment** | `indian-market-data-ingestion`, `look-ahead-bias-prevention` | `price_fetcher.py`, `calendar.py`, `data_queue.py`, zero look-ahead tests | **Completed** ✅ |
+| **Phase 2** | **Alternative Data & News/Social Scraper** | `news-social-scraping-india`, `look-ahead-bias-prevention` | Scrapers (Moneycontrol, ET, Reddit `r/IndianStreetBets`), velocity tracker | **Next Up** ⏳ |
+| **Phase 3** | **FinBERT Sentiment Inference Pipeline** | `finbert-sentiment-engine`, `look-ahead-bias-prevention` | `ProsusAI/finbert` inference, NER ticker resolution, 3x rolling z-score trigger | Planned |
+| **Phase 4** | **Point-in-Time Technical Indicator Engine** | `technical-indicators-pipeline`, `look-ahead-bias-prevention` | Vectorized RSI, VWAP, Bollinger Bands, MACD, ATR, observation fusion | Planned |
+| **Phase 5** | **Farama Gymnasium Indian Market Environment** | `gymnasium-trading-env`, `look-ahead-bias-prevention` | Gymnasium `TradingEnv`, Indian slippage model, circuit breakers, EOD square-off | Planned |
+| **Phase 6** | **Autonomous Strategy Agents (Heuristic & RL)** | `trading-strategy-agents` | Heuristic baselines, Sentiment breakout agent, SB3 PPO/RecurrentPPO agent | Planned |
+| **Phase 7** | **Purged Walk-Forward Cross-Validation** | `backtest-walk-forward-validation`, `look-ahead-bias-prevention` | Purged CV with purge gaps, Indian market regime detection (NIFTY/VIX) | Planned |
+| **Phase 8** | **Trade Telemetry & Quant Analytics** | `trade-telemetry-analytics` | JSON per-trade trigger logs, Sharpe/Sortino/Drawdown, QuantStats HTML report | Planned |
+| **Phase 9** | **Portfolio.Ai Platform Integration & Cloud DB** | `python-project-bootstrap`, `building-data-apps` | Cloud DB migration (TiDB/Railway), FastAPI/bridge to TypeScript frontend | Planned |
 
 ---
 
 ## 3. Detailed Phase-by-Phase Plan
 
-### Phase 0: Subsystem Architecture & Python Bootstrap
+### Phase 0: Subsystem Architecture & Python Bootstrap [COMPLETED]
 **Primary Skill**: `python-project-bootstrap`  
 **Goal**: Establish a production-grade Python 3.11+ subsystem alongside the existing TypeScript project using `uv` for blazing fast, reproducible dependency management.
 
 - **Tasks**:
-  1. Initialize `pyproject.toml` with `uv` lockfile and explicit project dependencies:
+  1. [x] Initialize `pyproject.toml` with `uv` lockfile and explicit project dependencies:
      - Core: `pydantic>=2.7`, `numpy>=1.26`, `pandas>=2.2`
      - Market Data & Scrapers: `yfinance>=0.2.40`, `beautifulsoup4`, `feedparser`, `praw`
      - NLP & ML: `torch>=2.2`, `transformers>=4.40`, `gymnasium>=0.29`, `stable-baselines3>=2.3`
      - Analysis & Reporting: `scipy`, `quantstats`, `plotly`, `matplotlib`
-  2. Create standard modular package structure under `src/`:
+  2. [x] Create standard modular package structure under `src/`:
      - `src/data/`: Data ingestion, scrapers, normalization, schemas
      - `src/nlp/`: FinBERT pipeline, sentiment features, NER mapping
      - `src/env/`: Farama Gymnasium environment, fee/slippage models
      - `src/strategy/`: Baseline heuristic & RL strategy agents
      - `src/analytics/`: Trade telemetry, metrics, QuantStats reporter
      - `src/bridge/`: Integration layer with Portfolio.Ai MySQL/API
-  3. Define immutable Pydantic v2 domain schemas (`src/data/schemas.py`):
+  3. [x] Define immutable Pydantic v2 domain schemas (`src/data/schemas.py`):
      - `PriceBar`, `NewsArticle`, `SentimentScore`, `Order`, `Trade`, `Position`, `PortfolioState`
-  4. Configure strict typing with `mypy.ini` and formatting with `ruff`.
+  4. [x] Configure strict typing with `mypy.ini` and formatting with `ruff`.
 
 - **Success Criteria**:
   - `uv sync` executes cleanly in `< 10s`.
@@ -94,25 +94,29 @@ flowchart TD
 
 ---
 
-### Phase 1: Free Market Data & Temporal Synchronization Engine
+### Phase 1: Free Market Data & Temporal Synchronization Engine [COMPLETED]
 **Primary Skills**: `indian-market-data-ingestion`, `look-ahead-bias-prevention`  
 **Goal**: Build a robust, free-tier price ingestion pipeline for NSE stocks with exact IST timezone handling and zero look-ahead bias.
 
 - **Tasks**:
-  1. Implement `src/data/price_fetcher.py`:
-     - Historical daily & intraday (5m, 15m) OHLCV bar fetcher using `yfinance` with fallback to NSE direct endpoints.
-     - Automatic ticker normalization (e.g. `POWERGRID` $\rightarrow$ `POWERGRID.NS`, `ONGC` $\rightarrow$ `ONGC.NS`).
-  2. Implement NSE Trading Calendar & IST Alignment:
+  1. [x] Implement `src/data/price_fetcher.py`:
+     - Historical daily & intraday (5m, 15m) OHLCV bar fetcher using `yfinance` with fallback to direct HTTP chart endpoints.
+     - Automatic ticker normalization (e.g. `POWERGRID` $\rightarrow$ `POWERGRID.NS`, `ONGC` $\rightarrow$ `ONGC.NS`, `REC` $\rightarrow$ `RECLTD.NS`).
+     - Candlestick mathematical integrity validation (`high >= max(open, close)`, `low <= min(open, close)`, `volume >= 0`).
+  2. [x] Implement NSE Trading Calendar & IST Alignment (`src/data/calendar.py`):
      - Market session enforcement: 09:15 to 15:30 IST.
-     - Exclusion of weekends and official NSE trading holidays.
-  3. Build `src/data/data_queue.py`:
+     - Exclusion of weekends and official NSE trading holidays (2023–2026 calendar).
+     - Standard UTC normalization with timezone-aware conversions.
+  3. [x] Build `src/data/data_queue.py`:
      - Priority-queue event synchronizer ensuring market events (candles, news) are processed in strictly non-decreasing chronological order ($t_0 \le t_1 \le t_2$).
-  4. Implement automated look-ahead assertion tests (`tests/test_look_ahead_price.py`):
+     - News buffering invariant: news published at $t_{\text{news}}$ is strictly hidden until bar $t_{\text{bar}} > t_{\text{news}}$ arrives.
+  4. [x] Implement automated look-ahead assertion tests (`tests/test_phase1_data.py`):
      - Assert that candle bar at timestamp $t$ only contains information up to $t$.
+     - Automated truncation invariance test: $f(D_{:t})$ strictly equals $f(D_{:T})_t$ for all backward rolling metrics.
 
 - **Success Criteria**:
-  - Seamlessly downloads and validates 1-year 5-minute and daily bars for the `NIFTY_LIQUID_UNIVERSE`.
-  - Zero timestamp collisions or look-ahead leakage in test suite.
+  - Seamlessly downloads and validates 1-year 5-minute and daily bars for target symbols (verified on `POWERGRID.NS` live & mock).
+  - 13/13 unit and temporal tests pass in `tests/test_phase1_data.py` and `tests/test_phase0_schemas.py`.
 
 ---
 
@@ -321,6 +325,7 @@ flowchart TD
 
 ## 4. Immediate Execution Next Steps (When Ready)
 
-1. **Step 1**: Bootstrap the Python subsystem (`Phase 0`) using `uv init` and generate `pyproject.toml` with the specified dependency matrix.
-2. **Step 2**: Create the Pydantic v2 schemas and directory skeleton.
-3. **Step 3**: Implement `price_fetcher.py` and `data_queue.py` (`Phase 1`) and run point-in-time validation tests.
+1. **Step 1 [COMPLETED]**: Bootstrap the Python subsystem (`Phase 0`) using `uv init` and generate `pyproject.toml` with the specified dependency matrix.
+2. **Step 2 [COMPLETED]**: Create the Pydantic v2 schemas and directory skeleton.
+3. **Step 3 [COMPLETED]**: Implement `src/data/calendar.py`, `src/data/price_fetcher.py`, and `src/data/data_queue.py` (`Phase 1`) with zero look-ahead bias and truncation invariance test suite.
+4. **Step 4 [NEXT UP]**: Implement **Phase 2: Alternative Data & News/Social Ingestion** (`src/data/news_scraper.py`, `src/data/entity_mapper.py`, and mention velocity $3\sigma$ trigger).

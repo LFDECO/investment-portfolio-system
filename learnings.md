@@ -11,7 +11,8 @@
 ## Table of Contents
 - [Chapter 0: Subsystem Architecture & Python Bootstrap](#chapter-0-subsystem-architecture--python-bootstrap)
 - [Chapter 1: Free Market Data Ingestion & Strict Time-Series Alignment](#chapter-1-free-market-data-ingestion--strict-time-series-alignment)
-- *(Upcoming Chapters: Financial NLP, Technical Indicators, Farama Gym Env, Strategy Agents, Purged Walk-Forward CV, Telemetry, and Cloud Deployment)*
+- [Chapter 2: Alternative Data & News/Social Ingestion (Upcoming)](#chapter-2-alternative-data--newssocial-ingestion)
+- *(Subsequent Chapters: Financial NLP, Technical Indicators, Farama Gym Env, Strategy Agents, Purged Walk-Forward CV, Telemetry, and Cloud Deployment)*
 
 ---
 
@@ -210,13 +211,64 @@ We implement an **Asynchronous Priority Queue**:
 
 ---
 
-## 4. How This Approach is Technically Sound
+## 4. The Technical Mechanics: Code Architecture & Invariants
+
+### A. The NSE Trading Calendar Engine (`src/data/calendar.py`)
+To prevent artificial data interpolation or holiday crashes, we built an explicit calendar engine containing:
+- **Exact Session Boundaries**: Pre-open (09:00–09:15 IST), Regular Session (09:15–15:30 IST), and Intraday Square-off cutoff (15:15 IST).
+- **Curated Multi-Year NSE Holiday Set**: A complete $O(1)$ lookup hash set covering national holidays, festival sessions, and election days across 2023, 2024, 2025, and 2026.
+- **After-Hours News Routing (`get_next_market_open`)**:
+  When a company drops an earnings release on Friday evening at 18:00 IST:
+  ```
+  Event Timestamp: Friday 18:00 IST
+  ├── Saturday / Sunday: Market Closed (Weekend)
+  ├── Monday (if Holiday): Market Closed
+  └── Mapped Execution Window: Tuesday 09:15:00 IST (03:45 UTC)
+  ```
+  This mathematically guarantees that after-market announcements cannot trigger simulated orders during non-existent weekend sessions.
+
+### B. Multi-Asset Price Ingestion & Sanity Auditing (`src/data/price_fetcher.py`)
+1. **Ticker Sanitizer**:
+   Automatically identifies NSE tickers, strips spaces, maps corporate renames (`REC` $\rightarrow$ `RECLTD.NS`, `ZOMATO` $\rightarrow$ `ETERNAL.NS`, `TATAMOTORS` $\rightarrow$ `TMPV.NS`), preserves explicit `.BO` symbols, and appends `.NS` by default.
+2. **Resilient Dual-Tier Fetcher**:
+   Primary ingestion queries `yfinance`. If rate limits or unauthenticated quote blocks occur, the engine falls back to direct chart API requests (`https://query1.finance.yahoo.com/v8/finance/chart/{ticker}`).
+3. **Candlestick Mathematical Integrity (`validate_candlestick`)**:
+   Every bar must strictly satisfy:
+   $$\text{high} \ge \max(\text{open}, \text{close})$$
+   $$\text{low} \le \min(\text{open}, \text{close})$$
+   $$\text{volume} \ge 0, \quad \text{prices} > 0$$
+   Any corrupt or zero-spread inverted quote is purged before entering the simulation pipeline.
+
+### C. The Priority Queue Temporal Ordering (`src/data/data_queue.py`)
+The `DataAlignmentQueue` uses a priority min-heap where events are ranked by timestamp and priority:
+- `priority = 0`: Price Bar events.
+- `priority = 1`: News / Social Chatter events.
+
+```python
+# The Fundamental Look-Ahead Prevention Invariant:
+if news_article.published_at < next_bar.timestamp:
+    released_news.append(news_article)  # Allowed to inform trade at next_bar.open
+else:
+    pending_buffer.append(news_article)  # Blocked! Belongs to the future!
+```
+
+### D. Truncation Invariance: The Mathematical Proof of Zero Leakage
+How do we prove to an institutional auditor that our backtest has zero look-ahead bias?
+We enforce **Truncation Invariance**:
+$$\forall t < T, \quad f(D_{0:t})_t \equiv f(D_{0:T})_t$$
+
+If we compute moving averages, RSI, or volatility on the first 30 days of data ($D_{0:30}$), the value computed on day 30 must be **byte-for-byte identical** to the value computed on day 30 when given the full 365 days of data ($D_{0:365}$).
+In our test suite (`tests/test_phase1_data.py`), `test_truncation_invariance_no_lookahead` verifies this across rolling slices with a strict floating-point tolerance of $10^{-9}$.
+
+---
+
+## 5. How This Approach is Technically Sound
 
 1. **Zero Future Contamination (Causal Invariant)**:
    Every feature vector $X_t$ is mathematically guaranteed to be a pure function of data up to time $t$:
    $$\forall X_t, \quad X_t = f(\{D_\tau \mid \tau \le t\})$$
 2. **Deterministic Replayability**:
-   Given the same date range and the same ticker universe, running the pipeline 100 times will produce the exact same sequence of events down to the microsecond.
+   Given the same date range and ticker universe, running the pipeline 100 times produces the exact same sequence of events down to the microsecond.
 3. **No Paid API Lock-In**:
    The entire data ingestion engine operates using free, publicly available market endpoints, making the project completely accessible and zero-cost to maintain.
 
@@ -233,3 +285,14 @@ We implement an **Asynchronous Priority Queue**:
 | **Pydantic** | A Python library that verifies that data matches exact expected types and shapes before code uses it. |
 | **Immutability** | An object state that cannot be modified after it is created, preventing accidental data tampering. |
 | **Priority Queue** | A data structure that automatically sorts items so the earliest timestamp is always processed first. |
+| **Truncation Invariance** | Mathematical property guaranteeing past feature values remain unchanged when future rows are added. |
+
+---
+
+# Chapter 2: Alternative Data & News/Social Ingestion (Preview)
+
+> In **Phase 2**, we expand our data layer beyond price candlesticks to include **unstructured alternative data**:
+> 1. Scrapers for top Indian financial portals (Moneycontrol, Economic Times, LiveMint, NSE Corporate Filings).
+> 2. Reddit sentiment crawler for `r/IndianStreetBets` using public JSON feeds.
+> 3. An Entity Resolution Engine that recognizes company nicknames in English news headlines ("Power Grid", "State Bank", "HDFC") and maps them to canonical tickers (`POWERGRID.NS`, `SBIN.NS`, `HDFCBANK.NS`).
+> 4. A **$3\sigma$ Mention Velocity Watchlist Trigger** that flags stocks experiencing sudden chatter surges before major price breakouts.

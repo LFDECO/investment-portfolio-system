@@ -129,21 +129,54 @@ A suite of 10 specialized agent skills was authored to govern every aspect of th
 
 ---
 
-## 7. Immediate Next Task: Phase 1 Implementation Plan
+## 7. Implementation Progress: Phase 1 Completed
 
-The next phase to execute is **Phase 1: Free Market Data Ingestion & Time-Series Alignment**.
+**Phase 1: Free Market Data & Temporal Synchronization Engine** is 100% complete and verified:
 
-### Scope of Phase 1:
-1. **`src/data/price_fetcher.py`**:
-   - Build a robust price fetcher using `yfinance` with fallback to direct NSE endpoints.
-   - Support historical daily bars (`1d`) and intraday bars (`5m`, `15m`).
-   - Standardize tickers to NSE format (`.NS`).
-2. **NSE Trading Calendar & IST Timezone Normalization**:
-   - Handle Indian Standard Time (IST, UTC+5:30) explicitly.
-   - Regular trading session boundaries: 09:15 to 15:30 IST.
-   - Calendar filter excluding weekends and official NSE trading holidays without interpolating false data.
-3. **`src/data/data_queue.py` (Chronological Event Queue)**:
-   - Implement priority queue ordering market events strictly by timestamp ($t_0 \le t_1 \le t_2$).
-   - Prevent any time-travel or future data leakage.
-4. **Automated Look-Ahead Assertions**:
-   - Write tests in `tests/test_phase1_data.py` asserting that appending future bars never mutates historical observations.
+1. **NSE Trading Calendar & Timezone Module ([src/data/calendar.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/calendar.py))**:
+   - Explicit timezone handling: `IST = zoneinfo.ZoneInfo("Asia/Kolkata")` and `UTC = zoneinfo.ZoneInfo("UTC")`.
+   - Strict session boundaries:
+     - Pre-open: 09:00 to 09:15 IST
+     - Regular market hours: 09:15 to 15:30 IST
+     - Intraday square-off cutoff: 15:15 IST
+   - Comprehensive NSE holiday database covering 2023 through 2026 (Republic Day, Independence Day, Gandhi Jayanti, Diwali, Holi, Good Friday, Eid, Muharram, etc.).
+   - Helper methods: `is_trading_day()`, `is_market_hours()`, `to_utc()`, `to_ist()`, `get_trading_days()`, `get_next_trading_day()`, and `get_next_market_open()`.
+
+2. **Multi-Asset Price Ingestion & Normalization ([src/data/price_fetcher.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/price_fetcher.py))**:
+   - Ticker normalizer automatically qualifying Indian equities (`POWERGRID` $\rightarrow$ `POWERGRID.NS`), preserving explicit `.BO` suffixes, and applying corporate symbol renames (`REC` $\rightarrow$ `RECLTD`, `ZOMATO` $\rightarrow$ `ETERNAL`, `TATAMOTORS` $\rightarrow$ `TMPV`).
+   - Free data ingestion via `yfinance` with automated direct HTTP fallback to Yahoo Finance chart v8 API (`https://query1.finance.yahoo.com/v8/finance/chart/{ticker}`).
+   - Deterministic synthetic bar generator (`generate_mock_bars`) for reproducible offline testing.
+   - Candlestick mathematical sanity validator (`validate_candlestick`): asserts positive prices, $\text{high} \ge \max(\text{open}, \text{close})$, $\text{low} \le \min(\text{open}, \text{close})$, and $\text{volume} \ge 0$.
+
+3. **Chronological Event Bus & Look-Ahead Prevention ([src/data/data_queue.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/data_queue.py))**:
+   - `DataAlignmentQueue`: Priority queue ordered chronologically ($t_0 \le t_1 \le t_2$) with deterministic tie-breaking (price bars priority 0, news priority 1).
+   - **Core Look-Ahead Invariant**: News published at $t_{\text{news}}$ is buffered in `_pending_news` and released **only** alongside a price bar whose open timestamp strictly exceeds $t_{\text{news}}$.
+   - Monotonically advancing simulation clock (`current_time`).
+
+4. **Package Exports & CLI Orchestration**:
+   - Exported all calendar, fetcher, and queue interfaces in [src/data/__init__.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/__init__.py).
+   - Updated [main.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/main.py) with `--fetch-mode` (`live`, `mock`), calendar inspection, and live queue alignment demonstration.
+
+5. **Automated Verification Suite ([tests/test_phase1_data.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/tests/test_phase1_data.py))**:
+   - `uv run pytest tests/ -v`: **13 passed in 1.21s** (covering ticker normalizer, NSE calendar, session boundaries, candlestick validation, priority queue ordering, news release invariants, and rolling truncation invariance).
+   - `uv run mypy src/ tests/`: **Success: no issues found in 15 source files** (strict mode).
+   - `uv run ruff check src/ tests/`: **All checks passed!**
+   - Verified end-to-end CLI execution on `POWERGRID.NS` in both live network and mock modes.
+
+---
+
+## 8. Immediate Next Task: Phase 2 Implementation Plan
+
+The next phase to execute is **Phase 2: Alternative Data & News/Social Ingestion**.
+
+### Scope of Phase 2:
+1. **`src/data/news_scraper.py`**:
+   - Build RSS feed parser for major Indian financial news sources (Moneycontrol, Economic Times, LiveMint, and NSE Corporate Announcements).
+   - Social chatter parser for Reddit `r/IndianStreetBets` using public JSON endpoints without requiring paid API credentials.
+2. **`src/data/entity_mapper.py`**:
+   - High-precision entity resolver mapping mentions in unstructured English text (e.g. "Power Grid", "State Bank", "HDFC", "Tata Motors") to canonical NSE ticker symbols (`POWERGRID.NS`, `SBIN.NS`, `HDFCBANK.NS`, `TMPV.NS`).
+3. **Mention Velocity & $3\sigma$ Watchlist Trigger**:
+   - Track mention frequency over a rolling 7-day window.
+   - Compute rolling $z$-score ($z = \frac{\text{mentions}_t - \mu_{7d}}{\sigma_{7d}}$) to detect abnormal sentiment surges ($z \ge 3.0$) and dynamically trigger watchlist inclusion.
+4. **Point-in-Time News Alignment Integration**:
+   - Feed scraped news articles directly into `DataAlignmentQueue`, validating that post-market news is automatically queued for next session's 09:15 IST open.
