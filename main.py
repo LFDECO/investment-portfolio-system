@@ -14,11 +14,14 @@ import sys
 
 from src.data import (
     DataAlignmentQueue,
+    MentionTracker,
     NewsArticle,
+    NewsScraper,
     NSETradingCalendar,
     PriceBar,
     fetch_ohlcv,
     generate_mock_bars,
+    generate_mock_news_stream,
     normalize_ticker,
     to_ist,
 )
@@ -72,6 +75,16 @@ def parse_args() -> argparse.Namespace:
         default="momentum",
         choices=["momentum", "mean_reversion", "sentiment", "rl"],
         help="Strategy agent to execute",
+    )
+    parser.add_argument(
+        "--scrape-news",
+        action="store_true",
+        help="Run live news and Reddit social scraper with entity mapping",
+    )
+    parser.add_argument(
+        "--test-mention-velocity",
+        action="store_true",
+        help="Demonstrate 3-sigma mention velocity tracking and alert triggers",
     )
     return parser.parse_args()
 
@@ -167,6 +180,48 @@ def main() -> None:
         logger.warning(
             "No price bars ingested. Verify date range or network connectivity."
         )
+
+    # -----------------------------------------------------------------------
+    # Phase 2 Demonstration: News Scraping & Mention Velocity
+    # -----------------------------------------------------------------------
+    if args.scrape_news:
+        logger.info("--- [Phase 2] Polling Live Financial Feeds & Reddit Public Chatter ---")
+        scraper = NewsScraper()
+        scraped_articles = scraper.scrape_all()
+        logger.info(f"Successfully scraped {len(scraped_articles)} unique alternative text articles.")
+        for item in scraped_articles[:5]:
+            ist_time = to_ist(item.published_at).strftime("%Y-%m-%d %H:%M IST")
+            logger.info(
+                f"[{item.source.upper()}] {ist_time} | Ticker: {item.ticker or 'None'} | "
+                f"Mentioned: {item.tickers_mentioned} | Title: '{item.title[:80]}...'"
+            )
+
+    if args.test_mention_velocity:
+        logger.info("--- [Phase 2] Demonstrating 3-Sigma Mention Velocity Watchlist Trigger ---")
+        mock_articles = generate_mock_news_stream(
+            tickers=["POWERGRID.NS", "RELIANCE.NS", "SBIN.NS", "TMPV.NS"],
+            start_date=start_d,
+            end_date=end_d,
+            seed=42,
+            density_per_day=5,
+        )
+        logger.info(f"Generated {len(mock_articles)} synthetic point-in-time articles.")
+        tracker = MentionTracker(window_hours=168, threshold_z=3.0, min_mentions=3)
+
+        alerts_triggered = 0
+        for art in mock_articles:
+            alerts = tracker.advance_to(art.published_at)
+            for alert in alerts:
+                alerts_triggered += 1
+                ist_ts = to_ist(alert.timestamp).strftime("%Y-%m-%d %H:%M IST")
+                logger.info(
+                    f"🔥 [3-SIGMA ALERT] {alert.ticker} at {ist_ts} | "
+                    f"Count: {alert.current_count} vs Mean: {alert.rolling_mean:.2f} (std: {alert.rolling_std:.2f}) | "
+                    f"z-score = {alert.z_score:.2f}"
+                )
+            tracker.record_article(art)
+
+        logger.info(f"Mention velocity simulation complete. Total 3-sigma alerts fired: {alerts_triggered}")
 
 
 if __name__ == "__main__":

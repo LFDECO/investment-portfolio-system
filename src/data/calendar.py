@@ -90,6 +90,11 @@ NSE_HOLIDAYS: Final[set[date]] = {
 }
 
 
+# Calendar coverage horizon bounds
+MIN_COVERED_YEAR: Final[int] = 2023
+MAX_COVERED_YEAR: Final[int] = 2026
+
+
 def to_utc(dt: datetime) -> datetime:
     """Convert any naive or aware datetime to timezone-aware UTC datetime."""
     if dt.tzinfo is None:
@@ -109,8 +114,20 @@ def is_trading_day(target: date | datetime) -> bool:
     """
     Check if a given date or datetime falls on an official NSE trading day.
     Excludes weekends (Saturday, Sunday) and official NSE holidays.
+
+    Raises:
+        ValueError: If target year exceeds MAX_COVERED_YEAR or precedes MIN_COVERED_YEAR,
+                    ensuring the system fails loudly rather than silently misbehaving.
     """
     d = to_ist(target).date() if isinstance(target, datetime) else target
+
+    if d.year < MIN_COVERED_YEAR or d.year > MAX_COVERED_YEAR:
+        raise ValueError(
+            f"NSETradingCalendar coverage is restricted to "
+            f"[{MIN_COVERED_YEAR}, {MAX_COVERED_YEAR}]. "
+            f"Target year {d.year} is outside verified holiday coverage. "
+            f"Please register official NSE holidays for {d.year}."
+        )
 
     # Monday=0, Sunday=6
     if d.weekday() in (5, 6):

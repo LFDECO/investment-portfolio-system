@@ -129,54 +129,120 @@ A suite of 10 specialized agent skills was authored to govern every aspect of th
 
 ---
 
-## 7. Implementation Progress: Phase 1 Completed
+## 7. Implementation Progress: Phase 1 Completed & Hardened
 
-**Phase 1: Free Market Data & Temporal Synchronization Engine** is 100% complete and verified:
+**Phase 1: Free Market Data & Temporal Synchronization Engine** is 100% complete, hardened, and verified:
 
-1. **NSE Trading Calendar & Timezone Module ([src/data/calendar.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/calendar.py))**:
+1. **NSE Trading Calendar & Horizon Boundary Guard ([src/data/calendar.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/calendar.py))**:
    - Explicit timezone handling: `IST = zoneinfo.ZoneInfo("Asia/Kolkata")` and `UTC = zoneinfo.ZoneInfo("UTC")`.
    - Strict session boundaries:
      - Pre-open: 09:00 to 09:15 IST
      - Regular market hours: 09:15 to 15:30 IST
      - Intraday square-off cutoff: 15:15 IST
-   - Comprehensive NSE holiday database covering 2023 through 2026 (Republic Day, Independence Day, Gandhi Jayanti, Diwali, Holi, Good Friday, Eid, Muharram, etc.).
-   - Helper methods: `is_trading_day()`, `is_market_hours()`, `to_utc()`, `to_ist()`, `get_trading_days()`, `get_next_trading_day()`, and `get_next_market_open()`.
+   - Comprehensive NSE holiday database covering 2023 through 2026.
+   - **Horizon Boundary Hard Raise**: Enforces `MIN_COVERED_YEAR = 2023` and `MAX_COVERED_YEAR = 2026`. Any query outside this verified window fails loudly with a hard `ValueError` raise in `is_trading_day()`, preventing silent CI test misbehavior or unverified holiday assumptions.
 
-2. **Multi-Asset Price Ingestion & Normalization ([src/data/price_fetcher.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/price_fetcher.py))**:
+2. **Columnar Parquet Cache & Multi-Asset Price Ingestion ([src/data/price_fetcher.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/price_fetcher.py))**:
    - Ticker normalizer automatically qualifying Indian equities (`POWERGRID` $\rightarrow$ `POWERGRID.NS`), preserving explicit `.BO` suffixes, and applying corporate symbol renames (`REC` $\rightarrow$ `RECLTD`, `ZOMATO` $\rightarrow$ `ETERNAL`, `TATAMOTORS` $\rightarrow$ `TMPV`).
    - Free data ingestion via `yfinance` with automated direct HTTP fallback to Yahoo Finance chart v8 API (`https://query1.finance.yahoo.com/v8/finance/chart/{ticker}`).
    - Deterministic synthetic bar generator (`generate_mock_bars`) for reproducible offline testing.
    - Candlestick mathematical sanity validator (`validate_candlestick`): asserts positive prices, $\text{high} \ge \max(\text{open}, \text{close})$, $\text{low} \le \min(\text{open}, \text{close})$, and $\text{volume} \ge 0$.
+   - **Local Columnar Parquet Cache (`pyarrow`)**:
+     - Partitioned by ticker and interval under `.cache/market_data/{ticker}_{interval}.parquet`.
+     - **Strict Invalidation Policy**: Historical closed bars ($< \text{today}$) are completely immutable and never re-fetched from network once cached; only the current/active trading day is queried live.
+   - **Price Discontinuity & Split Auditor (`detect_price_discontinuities`)**:
+     - Audits day-over-day price continuity against NSE statutory circuit thresholds (20%).
+     - Flags unflagged price shifts as `UNEXPLAINED_CIRCUIT_DISCONTINUITY` while reconciling explained splits against known corporate actions.
 
-3. **Chronological Event Bus & Look-Ahead Prevention ([src/data/data_queue.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/data_queue.py))**:
-   - `DataAlignmentQueue`: Priority queue ordered chronologically ($t_0 \le t_1 \le t_2$) with deterministic tie-breaking (price bars priority 0, news priority 1).
-   - **Core Look-Ahead Invariant**: News published at $t_{\text{news}}$ is buffered in `_pending_news` and released **only** alongside a price bar whose open timestamp strictly exceeds $t_{\text{news}}$.
-   - Monotonically advancing simulation clock (`current_time`).
+3. **Fast Vectorized Buffer for Gymnasium Hot-Loop ([src/data/fast_buffer.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/fast_buffer.py))**:
+   - **Structural Boundary**: Pydantic validates once at serialization/ingestion boundary; subsequent simulation steps in Farama Gymnasium and RL agent observations interact strictly with contiguous C-ordered NumPy arrays (`matrix: np.ndarray (N, 5)` of `[open, high, low, close, volume]`).
+   - `FastBarTuple` named tuple provides zero-overhead $O(1)$ single-bar access; `get_window()` provides zero-copy observation slices with edge-padding.
 
-4. **Package Exports & CLI Orchestration**:
-   - Exported all calendar, fetcher, and queue interfaces in [src/data/__init__.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/__init__.py).
+4. **Chronological Event Bus, Corporate Actions & Look-Ahead Prevention ([src/data/data_queue.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/data_queue.py))**:
+   - `DataAlignmentQueue`: Priority queue ordered chronologically ($t_0 \le t_1 \le t_2$) with deterministic tie-breaking.
+   - **FIFO Stability via Monotonic `sequence_id`**: Internal atomic counter (`itertools.count()`) assigned at insertion time as tertiary sort key `(timestamp, priority, sequence_id, payload)`, guaranteeing 100% deterministic replayability.
+   - **Event Priority Ranking**: `0: CorporateAction`, `1: NewsArticle`, `2: PriceBar`.
+   - **Physical Latency Look-Ahead Invariant**:
+     - News with `published_at < bar.timestamp` is released at candle open.
+     - News with `published_at >= bar.timestamp` (including exact timestamp matches) is explicitly held in `_pending_news` and released at candle $t+1$, mathematically modeling network, parsing, and order gateway transmission latency.
+   - **Explicit Corporate Actions**:
+     - `CorporateAction` domain schema (`SPLIT`, `BONUS`, `DIVIDEND`) flows through the priority queue on `ex_date` to dynamically scale portfolio holdings and cost basis without silently rewriting historical indicators.
+
+5. **Package Exports & CLI Orchestration**:
+   - Exported all calendar, fetcher, fast buffer, and queue interfaces in [src/data/__init__.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/__init__.py).
    - Updated [main.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/main.py) with `--fetch-mode` (`live`, `mock`), calendar inspection, and live queue alignment demonstration.
 
-5. **Automated Verification Suite ([tests/test_phase1_data.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/tests/test_phase1_data.py))**:
-   - `uv run pytest tests/ -v`: **13 passed in 1.21s** (covering ticker normalizer, NSE calendar, session boundaries, candlestick validation, priority queue ordering, news release invariants, and rolling truncation invariance).
-   - `uv run mypy src/ tests/`: **Success: no issues found in 15 source files** (strict mode).
-   - `uv run ruff check src/ tests/`: **All checks passed!**
-   - Verified end-to-end CLI execution on `POWERGRID.NS` in both live network and mock modes.
+6. **Automated Verification Suite ([tests/test_phase1_data.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/tests/test_phase1_data.py))**:
+   - `uv run pytest tests/ -v`: **19 passed in 1.35s** (covering ticker normalization, NSE calendar, session boundaries, candlestick validation, priority queue ordering, news release invariants, rolling truncation invariance, exact timestamp latency invariant, monotonic sequence_id FIFO tie-breaking, calendar horizon hard raise, FastBarBuffer contiguous indexing, Parquet disk cache roundtrips, and corporate action split detection).
+
+7. **Out-of-the-Box Adversarial Stress Testing & Engine Hardening ([tests/test_phase1_custom_edge_cases.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/tests/test_phase1_custom_edge_cases.py))**:
+   - Authored 27 additional custom edge-case and stress test cases:
+     - **Adversarial Candlestick Physics**: Non-finite numbers (`NaN`, `+Inf`, `-Inf`, `-0.0`) rejected via `math.isfinite()`; Doji/circuit limit locks (`open == high == low == close`) handled; sub-penny tick precision (₹0.05, ₹0.15) verified; inverted geometries rejected.
+     - **Temporal Chaos Monkey**: 1,000 randomized, completely scrambled events in `DataAlignmentQueue` restored to strictly non-decreasing chronological order; triple-collision at identical microsecond ($T_{\text{action}} = T_{\text{news}} = T_{\text{bar}}$) verifies priority invariants (CorporateAction priority 0 released on ex-date, News priority 1 held until $T+1$ due to latency, PriceBar priority 2 advances clock); 500-article high-velocity news burst buffered and released in FIFO order; multi-asset synchronous ticks verified without news duplication; post-market long weekend gap correctly queues news across holidays.
+     - **Explicit Temporal Ordering Guard**: Hard `ValueError` raised on out-of-order bars (`bar.timestamp < self._sim_clock`), resilient under optimized execution (`python -O`).
+     - **Calendar Boundaries**: Leap year Feb 29 2024 active session; Mumbai parliamentary & state election ad-hoc holidays; microsecond session boundary precision (`09:14:59.999999` vs `09:15:00.000000`, `15:30:00.000000` vs `15:30:00.000001`); multi-timezone round-trip invariants (UTC, IST, US/Eastern, Asia/Tokyo).
+     - **FastBarBuffer Hot-Path**: Warm-up cold-start padding verified (insufficient history padded with row 0 replicas); `window_size <= 0` raises `ValueError`; out-of-bounds raises `IndexError`; C-contiguous float64 memory layout; safe empty buffer.
+     - **Parquet Columnar Cache Stress**: Overlapping incremental appends automatically deduplicate; corrupted/zero-byte files fail gracefully with `None` fallback; caret index sanitization (`^NSEI` -> `INDEX_NSEI_1d.parquet`).
+     - **Corporate Action & Discontinuity Auditor**: Precise 20% statutory circuit boundary tested (19.999% clean vs 20.001% flagged); reverse split 1000% jump reconciled with registered action; unsorted input bars sorted internally before auditing.
+   - Comprehensive Verification Results:
+     - `uv run pytest tests/ -v`: **46 passed in 2.27s** (100% pass rate).
+     - `uv run mypy src/ tests/`: **Success: no issues found in 17 source files** (strict mode).
+     - `uv run ruff check src/ tests/`: **All checks passed!**
+     - `uv run ruff format --check src/ tests/`: **16 files already formatted.**
 
 ---
 
-## 8. Immediate Next Task: Phase 2 Implementation Plan
+## 8. Implementation Progress: Phase 2 Completed
 
-The next phase to execute is **Phase 2: Alternative Data & News/Social Ingestion**.
+**Phase 2: Alternative Data & News/Social Ingestion** is 100% complete, hardened, and verified:
 
-### Scope of Phase 2:
-1. **`src/data/news_scraper.py`**:
-   - Build RSS feed parser for major Indian financial news sources (Moneycontrol, Economic Times, LiveMint, and NSE Corporate Announcements).
-   - Social chatter parser for Reddit `r/IndianStreetBets` using public JSON endpoints without requiring paid API credentials.
-2. **`src/data/entity_mapper.py`**:
-   - High-precision entity resolver mapping mentions in unstructured English text (e.g. "Power Grid", "State Bank", "HDFC", "Tata Motors") to canonical NSE ticker symbols (`POWERGRID.NS`, `SBIN.NS`, `HDFCBANK.NS`, `TMPV.NS`).
-3. **Mention Velocity & $3\sigma$ Watchlist Trigger**:
-   - Track mention frequency over a rolling 7-day window.
-   - Compute rolling $z$-score ($z = \frac{\text{mentions}_t - \mu_{7d}}{\sigma_{7d}}$) to detect abnormal sentiment surges ($z \ge 3.0$) and dynamically trigger watchlist inclusion.
-4. **Point-in-Time News Alignment Integration**:
-   - Feed scraped news articles directly into `DataAlignmentQueue`, validating that post-market news is automatically queued for next session's 09:15 IST open.
+1. **Free Financial News & Social Ingestion ([src/data/news_scraper.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/news_scraper.py))**:
+   - `scrape_rss_feed`: Live parsing of top Indian financial portals (Moneycontrol, Economic Times, LiveMint, Business Standard) via `feedparser` and `httpx`.
+   - `scrape_reddit_public`: Scrapes retail sentiment from Reddit `r/IndianStreetBets` and `r/IndiaInvestments` using free public JSON feeds (`https://www.reddit.com/r/{sub}/new.json`), requiring zero paid API keys or developer subscriptions.
+   - `compute_article_fingerprint`: Cryptographic SHA-256 fingerprinting deduplicator discarding duplicate stories across syndication networks.
+   - `generate_mock_news_stream`: Deterministic synthetic point-in-time financial news generator for offline backtests.
+
+2. **Rule-Based Longest-Match-First Named Entity Resolution ([src/data/entity_mapper.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/entity_mapper.py))**:
+   - Covers ~100 liquid Indian equities and major market indices (`^NSEI`, `^INDIAVIX`, `^BSESN`, `^NSEBANK`).
+   - Longest-match-first sorting prevents prefix shadowing (e.g. `"Tata Motors"` matches before `"Tata"`).
+   - Strict regex word boundaries (`\b`), cashtags (`$INFY`), and corporate renames (`Zomato` $\rightarrow$ `ETERNAL.NS`, `TaMo` $\rightarrow$ `TMPV.NS`).
+   - False-positive blacklist systematically suppresses ambiguous English words (`IT`, `ON`, `CAN`, `FOR`, `BE`) unless accompanied by explicit ticker cashtags or company context.
+   - Headline priority rule assigns article title matches as `primary_ticker`.
+
+3. **3-Sigma Rolling $z$-Score Mention Velocity Tracker ([src/data/mention_tracker.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/src/data/mention_tracker.py))**:
+   - Maintains a sliding 7-day window (168 hourly buckets) per ticker.
+   - Computes rolling baseline mean ($\mu_{7\text{d}}$) and standard deviation ($\sigma_{7\text{d}}$) with division-by-zero protection.
+   - Dynamically triggers a $3\sigma$ watchlist alert when $z \ge 3.0$ and current hour count $\ge \text{min\_mentions}$ (3).
+
+4. **Point-in-Time News Alignment & CLI Integration**:
+   - Validated that breaking news during market hours ($t$) is strictly barred from trading on bar $t$; orders execute at the earliest at the open of bar $t+1$.
+   - Post-market and weekend news is held in `_pending_news` and released at 09:15 IST next trading session.
+   - Added `--test-mention-velocity` and `--scrape-news` CLI flags in [main.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/main.py).
+
+5. **Automated Verification Suite ([tests/test_phase2_news.py](file:///c:/Users/91801/Documents/GitHub/investment-portfolio-system/tests/test_phase2_news.py))**:
+   - 13 comprehensive unit and integration tests passing in 1.46s.
+   - Total test suite status: **59 passed in 1.82s** across Phase 0, Phase 1, and Phase 2.
+   - Strict `mypy` static typing passes across all 21 source files with zero errors.
+   - Full `ruff` check and format passing cleanly.
+
+---
+
+## 9. Immediate Next Task: Phase 3 Implementation Plan
+
+The next phase to execute is **Phase 3: FinBERT Sentiment Inference Pipeline**.
+
+### Scope of Phase 3:
+1. **`src/nlp/finbert_pipeline.py`**:
+   - Load `ProsusAI/finbert` via HuggingFace Transformers and PyTorch with local disk caching.
+   - Tokenization with truncation/padding up to 512 tokens.
+   - Inference pipeline outputting softmax probabilities: $P(\text{positive}), P(\text{negative}), P(\text{neutral})$.
+   - Compute normalized composite sentiment score: $S = P(\text{positive}) - P(\text{negative}) \in [-1.0, 1.0]$.
+2. **`src/nlp/sentiment_features.py`**:
+   - Assemble point-in-time sentiment feature vector:
+     - Raw score $S_t$
+     - 24-hour sentiment momentum: $\Delta S = S_t - S_{t-24\text{h}}$
+     - Mention velocity $z$-score from Phase 2
+     - Confidence score: $1.0 - P(\text{neutral})$
+3. **Inference Optimization**:
+   - Optimize for CPU workstations using `torch.inference_mode()` and batched tensor evaluation (`batch_size = 32`).
+

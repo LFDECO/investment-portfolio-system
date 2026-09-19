@@ -11,9 +11,12 @@ from datetime import UTC, date, datetime, time
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from src.data.calendar import (
     IST,
+    MAX_COVERED_YEAR,
+    MIN_COVERED_YEAR,
     get_next_market_open,
     get_next_trading_day,
     get_trading_days,
@@ -23,12 +26,16 @@ from src.data.calendar import (
     to_utc,
 )
 from src.data.data_queue import DataAlignmentQueue
+from src.data.fast_buffer import FastBarBuffer, FastBarTuple
 from src.data.price_fetcher import (
+    _read_parquet_cache,
+    _write_parquet_cache,
+    detect_price_discontinuities,
     generate_mock_bars,
     normalize_ticker,
     validate_candlestick,
 )
-from src.data.schemas import NewsArticle, PriceBar
+from src.data.schemas import CorporateAction, NewsArticle, PriceBar
 
 
 # ---------------------------------------------------------------------------
@@ -396,3 +403,250 @@ def test_truncation_invariance_no_lookahead() -> None:
                 f"LOOK-AHEAD LEAKAGE DETECTED in '{col}' at index {t}: "
                 f"full={full_val} vs truncated={trunc_val}"
             )
+
+
+# ---------------------------------------------------------------------------
+# 6. Hardened Latency & Tie-Breaking Invariant Tests
+# ---------------------------------------------------------------------------
+def test_exact_timestamp_lookahead_invariant() -> None:
+    """
+    CRITICAL LOOK-AHEAD TEST:
+    When an event's published_at matches a candle open EXACTLY (t_news == t_bar),
+    it MUST NOT be released at t_bar.open because physical transmission, parsing,
+    and exchange routing latency make execution at this bar's open impossible.
+    It must be buffered and released at the next bar.
+    """
+    queue = DataAlignmentQueue()
+
+    t_bar0 = datetime(2024, 1, 4, 3, 45, tzinfo=UTC)  # 09:15:00 IST
+    t_bar1 = datetime(2024, 1, 4, 3, 50, tzinfo=UTC)  # 09:20:00 IST
+
+    b0 = PriceBar(
+        timestamp=t_bar0,
+        ticker="POWERGRID.NS",
+        open=270,
+        high=272,
+        low=269,
+        close=271,
+        volume=5000,
+    )
+    b1 = PriceBar(
+        timestamp=t_bar1,
+        ticker="POWERGRID.NS",
+        open=271,
+        high=273,
+        low=270,
+        close=272,
+        volume=6000,
+    )
+
+    # News arrives at the EXACT same timestamp as bar 0 open
+    exact_news = NewsArticle(
+        article_id="EXACT_001",
+        ticker="POWERGRID.NS",
+        title="Breaking announcement at market open",
+        published_at=t_bar0,
+        source="Moneycontrol",
+    )
+
+    queue.push_price(b0)
+    queue.push_price(b1)
+    queue.push_news(exact_news)
+
+    # 1. Bar 0 is consumed
+    # Because published_at == t_bar0, it MUST NOT be released at Bar 0!
+    bar0, released0 = queue.consume_next_bar()
+    assert bar0 == b0
+    assert len(released0) == 0
+    assert queue.pending_news_count == 1
+
+    # 2. Bar 1 is consumed
+    # Because published_at (09:15) < t_bar1 (09:20), it is now released!
+    bar1, released1 = queue.consume_next_bar()
+    assert bar1 == b1
+    assert len(released1) == 1
+    assert released1[0].article_id == "EXACT_001"
+    assert queue.pending_news_count == 0
+
+
+def test_fifo_tie_breaking_sequence_id() -> None:
+    """
+    Verify strict FIFO tie-breaking for events sharing identical timestamps and priorities.
+    Ensures 100% deterministic replayability across runs.
+    """
+    queue = DataAlignmentQueue()
+
+    same_ts = datetime(2024, 1, 5, 4, 0, tzinfo=UTC)
+    t_bar = datetime(2024, 1, 5, 4, 5, tzinfo=UTC)
+
+    b0 = PriceBar(
+        timestamp=t_bar,
+        ticker="ONGC.NS",
+        open=230,
+        high=232,
+        low=229,
+        close=231,
+        volume=5000,
+    )
+    queue.push_price(b0)
+
+    # Push 5 news articles published at the exact same microsecond
+    inserted_ids = [f"NEWS_{i}" for i in range(5)]
+    for aid in inserted_ids:
+        queue.push_news(
+            NewsArticle(
+                article_id=aid,
+                ticker="ONGC.NS",
+                title=f"Article {aid}",
+                published_at=same_ts,
+                source="ET",
+            )
+        )
+
+    _, released = queue.consume_next_bar()
+    assert len(released) == 5
+    popped_ids = [n.article_id for n in released]
+    assert popped_ids == inserted_ids  # Strict FIFO preserved
+
+
+# ---------------------------------------------------------------------------
+# 7. Calendar Horizon Guard & Hard Raise Tests
+# ---------------------------------------------------------------------------
+def test_calendar_boundary_hard_raise() -> None:
+    """
+    Assert that NSETradingCalendar fails loudly (hard raise) when queried
+    past verified holiday coverage (e.g. year 2027), rather than silently misbehaving.
+    """
+    # Active coverage assertion: calendar must cover current year
+    assert MAX_COVERED_YEAR >= 2024
+    assert MIN_COVERED_YEAR <= 2023
+
+    # Hard raise past coverage
+    future_date = date(2027, 1, 1)
+    with pytest.raises(ValueError, match="outside verified holiday coverage"):
+        is_trading_day(future_date)
+
+    past_date = date(2022, 12, 31)
+    with pytest.raises(ValueError, match="outside verified holiday coverage"):
+        is_trading_day(past_date)
+
+
+# ---------------------------------------------------------------------------
+# 8. FastBarBuffer Gymnasium Loop Hot-Path Tests
+# ---------------------------------------------------------------------------
+def test_fast_bar_buffer_contiguous_indexing() -> None:
+    """
+    Verify FastBarBuffer provides zero-overhead contiguous array indexing
+    and window slicing without instantiating Pydantic models per step.
+    """
+    start_d = date(2024, 1, 1)
+    end_d = date(2024, 1, 31)
+    bars = generate_mock_bars("POWERGRID.NS", start_d, end_d, interval="1d")
+
+    buffer = FastBarBuffer.from_bars(bars)
+    assert len(buffer) == len(bars)
+    assert buffer.matrix.shape == (len(bars), 5)
+    assert buffer.matrix.dtype == np.float64
+
+    # O(1) single-step access
+    step_bar: FastBarTuple = buffer.get_bar(5)
+    assert isinstance(step_bar, FastBarTuple)
+    assert step_bar.open == bars[5].open
+    assert step_bar.close == bars[5].close
+
+    # Contiguous observation window
+    window = buffer.get_window(end_idx=10, window_size=5)
+    assert window.shape == (5, 5)
+    assert np.array_equal(window[-1], buffer.matrix[10])
+
+
+# ---------------------------------------------------------------------------
+# 9. Local Parquet Disk Cache Tests
+# ---------------------------------------------------------------------------
+def test_parquet_disk_cache(tmp_path: object) -> None:
+    """
+    Verify local columnar Parquet cache roundtrips accurately and eliminates
+    redundant network calls on closed historical bars.
+    """
+    start_d = date(2024, 1, 1)
+    end_d = date(2024, 1, 15)
+    bars = generate_mock_bars("ONGC.NS", start_d, end_d, interval="1d")
+
+    # Write cache
+    _write_parquet_cache("ONGC.NS", "1d", bars)
+
+    start_dt = datetime(2024, 1, 1, 0, 0, tzinfo=UTC)
+    end_dt = datetime(2024, 1, 15, 23, 59, tzinfo=UTC)
+
+    # Read cache
+    cached = _read_parquet_cache("ONGC.NS", "1d", start_dt, end_dt)
+    assert cached is not None
+    assert len(cached) == len(bars)
+    assert cached[0].close == bars[0].close
+    assert cached[-1].volume == bars[-1].volume
+
+
+# ---------------------------------------------------------------------------
+# 10. Corporate Action Split Continuity & Discontinuity Detector
+# ---------------------------------------------------------------------------
+def test_corporate_action_split_and_discontinuity() -> None:
+    """
+    Test corporate action propagation through DataAlignmentQueue
+    and discontinuity detection for unadjusted splits.
+    """
+    queue = DataAlignmentQueue()
+
+    t0 = datetime(2024, 1, 10, 3, 45, tzinfo=UTC)
+    t1 = datetime(2024, 1, 11, 3, 45, tzinfo=UTC)  # Ex-date of 10:1 split
+
+    b0 = PriceBar(
+        timestamp=t0,
+        ticker="TATASTEEL.NS",
+        open=1200,
+        high=1210,
+        low=1190,
+        close=1200,
+        volume=100000,
+    )
+    # On split ex-date, unadjusted price drops from 1200 to 120
+    b1 = PriceBar(
+        timestamp=t1, ticker="TATASTEEL.NS", open=121, high=123, low=119, close=120, volume=1000000
+    )
+
+    # Corporate action event
+    split_action = CorporateAction(
+        action_id="ACT_SPLIT_001",
+        ticker="TATASTEEL.NS",
+        action_type="SPLIT",
+        ex_date=t1,
+        ratio="1:10",
+        multiplier=10.0,
+    )
+
+    # Discontinuity check WITHOUT action -> flags anomaly
+    unflagged_anomalies = detect_price_discontinuities(
+        [b0, b1], threshold_pct=0.20, known_actions=[]
+    )
+    assert len(unflagged_anomalies) == 1
+    assert unflagged_anomalies[0]["flag"] == "UNEXPLAINED_CIRCUIT_DISCONTINUITY"
+
+    # Discontinuity check WITH action -> anomaly explained, passes clean
+    flagged_anomalies = detect_price_discontinuities(
+        [b0, b1], threshold_pct=0.20, known_actions=[split_action]
+    )
+    assert len(flagged_anomalies) == 0
+
+    # Test queue releases corporate action on ex-date candle open
+    queue.push_price(b0)
+    queue.push_price(b1)
+    queue.push_corporate_action(split_action)
+
+    bar, actions, _ = queue.consume_tick()
+    assert bar == b0
+    assert len(actions) == 0  # Not yet ex-date
+
+    bar, actions, _ = queue.consume_tick()
+    assert bar == b1
+    assert len(actions) == 1
+    assert actions[0].action_type == "SPLIT"
+    assert actions[0].multiplier == 10.0

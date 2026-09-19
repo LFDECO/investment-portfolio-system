@@ -96,51 +96,90 @@ flowchart TD
 
 ### Phase 1: Free Market Data & Temporal Synchronization Engine [COMPLETED]
 **Primary Skills**: `indian-market-data-ingestion`, `look-ahead-bias-prevention`  
-**Goal**: Build a robust, free-tier price ingestion pipeline for NSE stocks with exact IST timezone handling and zero look-ahead bias.
+**Goal**: Build a robust, free-tier price ingestion pipeline for NSE stocks with exact IST timezone handling, local Parquet caching, high-performance Gymnasium buffers, and zero look-ahead bias.
 
 - **Tasks**:
   1. [x] Implement `src/data/price_fetcher.py`:
      - Historical daily & intraday (5m, 15m) OHLCV bar fetcher using `yfinance` with fallback to direct HTTP chart endpoints.
-     - Automatic ticker normalization (e.g. `POWERGRID` $\rightarrow$ `POWERGRID.NS`, `ONGC` $\rightarrow$ `ONGC.NS`, `REC` $\rightarrow$ `RECLTD.NS`).
+     - Automatic ticker normalization (e.g. `POWERGRID` $\rightarrow$ `POWERGRID.NS`, `ONGC` $\rightarrow$ `ONGC.NS`, `REC` $\rightarrow$ `RECLTD.NS`, `ZOMATO` $\rightarrow$ `ETERNAL.NS`, `TATAMOTORS` $\rightarrow$ `TMPV.NS`).
      - Candlestick mathematical integrity validation (`high >= max(open, close)`, `low <= min(open, close)`, `volume >= 0`).
+     - Columnar local disk caching via `pyarrow` (`.cache/market_data/`) with immutable historical closed-bar invalidation policy (never re-fetch closed bars; only current day queried live).
+     - Day-over-day price continuity auditor (`detect_price_discontinuities`) flagging unexplained $>20\%$ jumps (NSE circuit thresholds) absent corporate action explanation.
   2. [x] Implement NSE Trading Calendar & IST Alignment (`src/data/calendar.py`):
-     - Market session enforcement: 09:15 to 15:30 IST.
+     - Market session enforcement: 09:15 to 15:30 IST, pre-open (09:00–09:15 IST), intraday square-off (15:15 IST).
      - Exclusion of weekends and official NSE trading holidays (2023–2026 calendar).
      - Standard UTC normalization with timezone-aware conversions.
-  3. [x] Build `src/data/data_queue.py`:
-     - Priority-queue event synchronizer ensuring market events (candles, news) are processed in strictly non-decreasing chronological order ($t_0 \le t_1 \le t_2$).
-     - News buffering invariant: news published at $t_{\text{news}}$ is strictly hidden until bar $t_{\text{bar}} > t_{\text{news}}$ arrives.
-  4. [x] Implement automated look-ahead assertion tests (`tests/test_phase1_data.py`):
+     - Hard boundary guard: hard `ValueError` raise on queries outside `[MIN_COVERED_YEAR, MAX_COVERED_YEAR]` (`2023`–`2026`) ensuring loud CI failures rather than silent holiday leakage.
+  3. [x] Build Vectorized Gymnasium Hot-Loop Buffer (`src/data/fast_buffer.py`):
+     - `FastBarBuffer` backed by contiguous C-ordered `np.ndarray` matrix `(N, 5)` of `[open, high, low, close, volume]` and 1D vector columns.
+     - Pydantic models validate once at serialization/ingestion boundary; Gym simulation steps and RL observations only touch the array form (`get_window`, `get_bar`, `FastBarTuple`), preventing per-step instantiation overhead.
+  4. [x] Build Point-in-Time Event Synchronizer (`src/data/data_queue.py`):
+     - Priority-queue event synchronizer ensuring market events (corporate actions, news, candles) are processed in strictly non-decreasing chronological order ($t_0 \le t_1 \le t_2$).
+     - Strict FIFO stability via monotonic `sequence_id` (`itertools.count()`) as tertiary heap key `(timestamp, priority, sequence_id, payload)`.
+     - Event priority ranking: `0: CorporateAction`, `1: NewsArticle`, `2: PriceBar`.
+     - Physical latency news release invariant: news with `published_at < bar.timestamp` is released on candle open; news with `published_at >= bar.timestamp` is retained in `_pending_news` and released on bar $t+1$.
+     - Explicit `CorporateAction` event dispatching on ex-date candle ticks for dynamic position and cost-basis adjustment.
+  5. [x] Implement automated verification test suite (`tests/test_phase1_data.py`):
      - Assert that candle bar at timestamp $t$ only contains information up to $t$.
      - Automated truncation invariance test: $f(D_{:t})$ strictly equals $f(D_{:T})_t$ for all backward rolling metrics.
+     - Exact timestamp look-ahead physical latency assertion (`test_exact_timestamp_lookahead_invariant`).
+     - FIFO `sequence_id` tie-breaking assertion.
+     - Calendar horizon hard raise assertion.
+     - FastBarBuffer contiguous slicing and window padding tests.
+     - Parquet cache write/read roundtrip and coverage matching.
+     - Corporate action split detection and unadjusted anomaly flagging.
 
 - **Success Criteria**:
   - Seamlessly downloads and validates 1-year 5-minute and daily bars for target symbols (verified on `POWERGRID.NS` live & mock).
-  - 13/13 unit and temporal tests pass in `tests/test_phase1_data.py` and `tests/test_phase0_schemas.py`.
+  - 19/19 unit and temporal tests pass in `tests/test_phase1_data.py` and `tests/test_phase0_schemas.py`.
+  - Strict `mypy` static typing passes across all 16 source files with zero errors.
+  - Full `ruff` check and format passing cleanly.
 
 ---
 
-### Phase 2: Alternative Data & News/Social Ingestion
+### Phase 2: Alternative Data & News/Social Ingestion [COMPLETED]
 **Primary Skills**: `news-social-scraping-india`, `look-ahead-bias-prevention`  
 **Goal**: Scrape English financial news and social sentiment from free Indian market sources without future leakage.
 
 - **Tasks**:
-  1. Build `src/data/news_scraper.py`:
-     - RSS feed parser for Moneycontrol, Economic Times, LiveMint, and NSE Corporate Announcements.
-     - Social scraper for Reddit `r/IndianStreetBets` using public RSS/JSON endpoints (no paid API key required).
-  2. Implement `src/data/entity_mapper.py`:
-     - Indian company alias resolver: Maps text mentions (e.g. "Power Grid", "ONGC", "HDFC", "State Bank") to canonical tickers (`POWERGRID.NS`, `ONGC.NS`, `HDFCBANK.NS`, `SBIN.NS`).
-  3. Implement Mention Velocity & Watchlist Trigger:
-     - Track hourly mention volume per symbol over a 7-day rolling window.
-     - Compute rolling z-score: $z = \frac{\text{mentions}_t - \mu_{7d}}{\sigma_{7d}}$.
-     - Trigger dynamic watchlist inclusion when $z \ge 3.0$ (3x baseline surge).
-  4. Point-in-Time News Alignment Rule:
+  1. [x] Build `src/data/news_scraper.py`:
+     - RSS feed parser for Moneycontrol, Economic Times, LiveMint, and Business Standard (`scrape_rss_feed`).
+     - Social scraper for Reddit `r/IndianStreetBets` and `r/IndiaInvestments` using public JSON endpoints (`scrape_reddit_public`, zero paid API keys required).
+     - Cryptographic SHA-256 fingerprinting deduplicator (`compute_article_fingerprint`) with TTL cache.
+     - Deterministic synthetic news generator (`generate_mock_news_stream`) for reproducible offline backtesting.
+  2. [x] Implement `src/data/entity_mapper.py`:
+     - Indian company alias resolver (`EntityMapper`): Maps text mentions (e.g. "Power Grid", "ONGC", "HDFC", "State Bank", "TaMo") to canonical tickers (`POWERGRID.NS`, `ONGC.NS`, `HDFCBANK.NS`, `SBIN.NS`, `TMPV.NS`).
+     - Pre-compiled regex patterns sorted longest-match-first with strict word boundaries `\b` and `(?:\$)?` prefix support.
+     - Ambiguous English word collision blacklist (`IT`, `ON`, `CAN`, `FOR`, `BE`) preventing false-positive ticker triggers.
+     - Headline priority assignment designating title matches as `primary_ticker`.
+  3. [x] Implement Mention Velocity & Watchlist Trigger (`src/data/mention_tracker.py`):
+     - Track hourly mention volume per symbol over a 7-day rolling window ($W=168$ hourly buckets).
+     - Compute rolling z-score: $z = \frac{\text{mentions}_t - \mu_{7d}}{\sigma_{7d}}$ with division-by-zero protection.
+     - Trigger dynamic watchlist inclusion alert when $z \ge 3.0$ and $\text{mentions}_t \ge 3$.
+  4. [x] Point-in-Time News Alignment Rule (`src/data/data_queue.py`):
      - News timestamped during trading hours ($t$) is strictly barred from influencing bar $t$; orders execute at the earliest at the open of bar $t+1$.
-     - News arriving post-market (after 15:30 IST) is queued for execution at 09:15 IST next session.
+     - News arriving post-market (after 15:30 IST or over weekends/holidays) is queued for execution at 09:15 IST next session open.
+  5. [x] Automated Unit & Integration Test Suite (`tests/test_phase2_news.py`):
+     - Multi-word longest match precedence (`test_multi_word_longest_match_precedence`).
+     - Corporate renames & aliases (`test_corporate_renames_and_aliases`).
+     - Dollar-prefixed cashtags (`test_dollar_prefixed_tickers`).
+     - False positive suppression (`test_false_positive_suppression`).
+     - Article title priority mapping (`test_article_title_priority_mapping`).
+     - HTML tag cleaning & whitespace normalization (`test_clean_html_text`).
+     - SHA-256 fingerprinting (`test_compute_article_fingerprint`).
+     - Deterministic mock news stream (`test_mock_news_stream_generator`).
+     - 3-sigma rolling z-score mathematics (`test_rolling_z_score_mathematics`).
+     - Minimum mentions threshold guard (`test_min_mentions_threshold_prevents_false_alarms`).
+     - Hourly bucket sliding window progression (`test_advance_to_sliding_window_progression`).
+     - Point-in-time subsequent candle open alignment (`test_news_aligned_to_subsequent_candle_open`).
+     - Batch historical mention velocity extraction (`test_batch_historical_mention_velocities`).
 
 - **Success Criteria**:
   - Successfully parses RSS headlines and maps $> 90\%$ of company mentions to canonical NSE tickers.
-  - Generates verifiable alert events when chatter velocity exceeds $3\sigma$.
+  - Generates verifiable alert events when chatter velocity exceeds $3\sigma$ (verified on `RELIANCE.NS` $z=15.97$).
+  - 59/59 automated tests passing across test suite in $< 2.0$s.
+  - Strict `mypy` static typing passes across all 21 source files with zero errors.
+  - Full `ruff` check and format passing cleanly.
 
 ---
 

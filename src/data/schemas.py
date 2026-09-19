@@ -42,6 +42,40 @@ class NewsArticle(StrictSchema):
     published_at: datetime
     source: str = Field(..., min_length=1)
     url: str | None = None
+    tier: Literal["official", "news", "social"] = "news"
+    tickers_mentioned: list[str] = Field(default_factory=list)
+    raw_sentiment: float | None = None
+
+
+class MentionVelocity(StrictSchema):
+    """
+    Rolling mention velocity metrics for an asset.
+    Used for 3-sigma chatter surge detection and dynamic watchlist inclusion.
+    """
+
+    ticker: str = Field(..., min_length=1, max_length=20)
+    timestamp: datetime
+    window_hours: int = 168  # 7-day rolling window
+    current_count: int = Field(..., ge=0)
+    rolling_mean: float = Field(..., ge=0.0)
+    rolling_std: float = Field(..., ge=0.0)
+    z_score: float
+    triggered: bool = False
+
+
+class CorporateAction(StrictSchema):
+    """
+    Explicit corporate action event (stock split, bonus, cash dividend).
+    Propagated through DataAlignmentQueue to adjust positions on ex-date.
+    """
+
+    action_id: str = Field(..., min_length=1)
+    ticker: str = Field(..., min_length=1, max_length=20)
+    action_type: Literal["SPLIT", "BONUS", "DIVIDEND", "RIGHTS"]
+    ex_date: datetime
+    ratio: str | None = None
+    multiplier: float = Field(1.0, gt=0.0)
+    dividend_amount: float | None = Field(default=None, ge=0.0)
 
 
 class SentimentScore(StrictSchema):

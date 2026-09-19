@@ -2,12 +2,15 @@
 Free Market Data Ingestion Pipeline for Indian Equities (NSE/BSE).
 
 Fetches historical and intraday OHLCV bars using yfinance with resilient
-direct HTTP fallback, enforces candlestick integrity invariants, and
-normalizes all bar timestamps to timezone-aware UTC.
+direct HTTP fallback, enforces candlestick integrity invariants,
+manages a local columnar Parquet warehouse/cache, and detects price discontinuities.
 """
 
 import logging
+import math
+from collections.abc import Iterable
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 from typing import Any, Final
 
 import httpx
@@ -16,9 +19,11 @@ import pandas as pd
 import yfinance as yf
 
 from .calendar import is_market_hours, to_utc
-from .schemas import PriceBar
+from .schemas import CorporateAction, PriceBar
 
 logger = logging.getLogger("price-fetcher")
+
+CACHE_DIR: Final[Path] = Path(".cache/market_data")
 
 # Corporate ticker renames (historical or updated symbols)
 CORPORATE_RENAMES: Final[dict[str, str]] = {
@@ -64,11 +69,20 @@ def validate_candlestick(
 ) -> bool:
     """
     Verify candlestick mathematical integrity:
-    1. All prices positive
-    2. High >= max(Open, Close)
-    3. Low <= min(Open, Close)
-    4. Volume >= 0
+    1. All prices and volume are finite numbers (no NaN or Inf)
+    2. All prices positive
+    3. High >= max(Open, Close)
+    4. Low <= min(Open, Close)
+    5. Volume >= 0
     """
+    if not (
+        math.isfinite(open_p)
+        and math.isfinite(high_p)
+        and math.isfinite(low_p)
+        and math.isfinite(close_p)
+        and math.isfinite(volume)
+    ):
+        return False
     if open_p <= 0 or high_p <= 0 or low_p <= 0 or close_p <= 0:
         return False
     if high_p < low_p:
@@ -80,12 +94,163 @@ def validate_candlestick(
     return volume >= 0
 
 
+def _get_cache_path(ticker: str, interval: str) -> Path:
+    safe_ticker = ticker.replace("^", "INDEX_").replace(".", "_")
+    return CACHE_DIR / f"{safe_ticker}_{interval}.parquet"
+
+
+def _read_parquet_cache(
+    ticker: str,
+    interval: str,
+    start_dt: datetime,
+    end_dt: datetime,
+) -> list[PriceBar] | None:
+    """
+    Retrieve bars from the local columnar Parquet cache if available
+    and covers the requested closed historical range.
+    """
+    path = _get_cache_path(ticker, interval)
+    if not path.exists():
+        return None
+
+    try:
+        df = pd.read_parquet(path)
+        if df.empty or "timestamp" not in df.columns:
+            return None
+
+        # Ensure timestamps in dataframe are timezone-aware UTC
+        if df["timestamp"].dt.tz is None:
+            df["timestamp"] = df["timestamp"].dt.tz_localize(UTC)
+        else:
+            df["timestamp"] = df["timestamp"].dt.tz_convert(UTC)
+
+        cache_min: datetime = df["timestamp"].min().to_pydatetime()
+        cache_max: datetime = df["timestamp"].max().to_pydatetime()
+
+        # Cache must cover requested range.
+        # For daily bars: compare calendar dates to avoid intraday mismatch (03:45 vs 00:00 UTC).
+        if interval == "1d":
+            covers_start = cache_min.date() <= start_dt.date()
+            covers_end = cache_max.date() >= end_dt.date()
+        else:
+            covers_start = (cache_min <= start_dt) or (cache_min.date() <= start_dt.date())
+            covers_end = (cache_max >= end_dt) or (cache_max.date() >= end_dt.date())
+
+        if covers_start and covers_end:
+            if interval == "1d":
+                mask = (df["timestamp"].dt.date >= start_dt.date()) & (
+                    df["timestamp"].dt.date <= end_dt.date()
+                )
+            else:
+                mask = (df["timestamp"] >= start_dt) & (df["timestamp"] <= end_dt)
+
+            sliced = df[mask]
+            bars: list[PriceBar] = []
+            for _, row in sliced.iterrows():
+                ts = row["timestamp"]
+                if hasattr(ts, "to_pydatetime"):
+                    ts = ts.to_pydatetime()
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=UTC)
+                bars.append(
+                    PriceBar(
+                        timestamp=ts,
+                        ticker=ticker,
+                        open=float(row["open"]),
+                        high=float(row["high"]),
+                        low=float(row["low"]),
+                        close=float(row["close"]),
+                        volume=float(row["volume"]),
+                    )
+                )
+            bars.sort(key=lambda b: b.timestamp)
+            return bars
+    except Exception as e:
+        logger.warning(f"Error reading Parquet cache for {ticker}: {e}")
+    return None
+
+
+def _write_parquet_cache(ticker: str, interval: str, bars: list[PriceBar]) -> None:
+    """Persist validated PriceBars to local columnar Parquet store."""
+    if not bars:
+        return
+
+    try:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        path = _get_cache_path(ticker, interval)
+        new_df = pd.DataFrame(
+            [
+                {
+                    "timestamp": b.timestamp,
+                    "open": b.open,
+                    "high": b.high,
+                    "low": b.low,
+                    "close": b.close,
+                    "volume": b.volume,
+                }
+                for b in bars
+            ]
+        )
+
+        if path.exists():
+            existing_df = pd.read_parquet(path)
+            combined = (
+                pd.concat([existing_df, new_df])
+                .drop_duplicates(subset=["timestamp"])
+                .sort_values("timestamp")
+            )
+        else:
+            combined = new_df
+
+        combined.to_parquet(path, index=False)
+    except Exception as e:
+        logger.warning(f"Error writing Parquet cache for {ticker}: {e}")
+
+
+def detect_price_discontinuities(
+    bars: list[PriceBar],
+    threshold_pct: float = 0.20,
+    known_actions: Iterable[CorporateAction] = (),
+) -> list[dict[str, Any]]:
+    """
+    Audit day-over-day price series continuity.
+    Detects unadjusted splits or data corruptions where day-over-day return exceeds
+    statutory threshold (NSE 20% circuit limit) without a corresponding corporate action flag.
+    """
+    if len(bars) < 2:
+        return []
+
+    sorted_bars = sorted(bars, key=lambda b: b.timestamp)
+    action_dates = {act.ex_date.date() for act in known_actions}
+    anomalies: list[dict[str, Any]] = []
+
+    for i in range(1, len(sorted_bars)):
+        prev_close = sorted_bars[i - 1].close
+        curr_close = sorted_bars[i].close
+        if prev_close <= 0:
+            continue
+        pct_change = abs(curr_close - prev_close) / prev_close
+        curr_date = sorted_bars[i].timestamp.date()
+
+        if pct_change > threshold_pct and curr_date not in action_dates:
+            anomalies.append(
+                {
+                    "ticker": sorted_bars[i].ticker,
+                    "timestamp": sorted_bars[i].timestamp,
+                    "prev_close": prev_close,
+                    "curr_close": curr_close,
+                    "pct_change": pct_change,
+                    "flag": "UNEXPLAINED_CIRCUIT_DISCONTINUITY",
+                }
+            )
+
+    return anomalies
+
+
 def _fetch_direct_chart_fallback(
     ticker: str, start_dt: datetime, end_dt: datetime, interval: str
 ) -> list[PriceBar]:
-    """
-    Direct HTTP fallback to Yahoo Finance chart v8 API if yfinance fails.
-    """
+    """Direct HTTP fallback to Yahoo Finance chart v8 API if yfinance fails."""
     canonical = normalize_ticker(ticker)
     period1 = int(start_dt.timestamp())
     period2 = int(end_dt.timestamp())
@@ -186,7 +351,6 @@ def generate_mock_bars(
             continue
 
         if interval == "1d":
-            # 1 bar per day at 09:15 IST (03:45 UTC)
             bar_ts = datetime(
                 curr_date.year,
                 curr_date.month,
@@ -215,7 +379,6 @@ def generate_mock_bars(
             )
             curr_price = close_p
         elif interval in ("5m", "15m"):
-            # Intraday bars from 09:15 to 15:30 IST
             mins_step = 5 if interval == "5m" else 15
             current_time = datetime(
                 curr_date.year,
@@ -268,20 +431,12 @@ def fetch_ohlcv(
     interval: str = "1d",
     auto_adjust: bool = True,
     use_fallback: bool = True,
+    use_cache: bool = True,
+    refresh_cache: bool = False,
 ) -> list[PriceBar]:
     """
     Fetch and normalize OHLCV candlestick bars for an Indian stock.
-
-    Args:
-        ticker: Symbol string (e.g. 'POWERGRID', 'ONGC.NS', '^NSEI').
-        start: Start boundary string ('YYYY-MM-DD') or date/datetime.
-        end: End boundary string ('YYYY-MM-DD') or date/datetime.
-        interval: Bar size: '1m', '5m', '15m', '1h', '1d'.
-        auto_adjust: True to return split- and dividend-adjusted bars.
-        use_fallback: Whether to attempt direct HTTP or mock generation on error.
-
-    Returns:
-        Ordered list of validated PriceBar objects strictly timestamped in UTC.
+    Checks local columnar Parquet cache first for closed historical periods.
     """
     canonical = normalize_ticker(ticker)
 
@@ -300,6 +455,13 @@ def fetch_ohlcv(
     else:
         end_dt = to_utc(end)
 
+    # 1. Check local Parquet cache
+    if use_cache and not refresh_cache:
+        cached_bars = _read_parquet_cache(canonical, interval, start_dt, end_dt)
+        if cached_bars:
+            logger.debug(f"Loaded {len(cached_bars)} bars for {canonical} from Parquet cache.")
+            return cached_bars
+
     bars: list[PriceBar] = []
 
     try:
@@ -315,7 +477,6 @@ def fetch_ohlcv(
 
         if df is not None and not df.empty:
             for idx, row in df.iterrows():
-                # Check for NaNs
                 if (
                     pd.isna(row.get("Open"))
                     or pd.isna(row.get("High"))
@@ -333,7 +494,6 @@ def fetch_ohlcv(
                 if not validate_candlestick(o, h, l_p, c, v):
                     continue
 
-                # Ensure UTC timestamp
                 raw_ts: Any = idx
                 if hasattr(raw_ts, "to_pydatetime"):
                     pydt = raw_ts.to_pydatetime()
@@ -344,7 +504,6 @@ def fetch_ohlcv(
 
                 bar_ts = to_utc(pydt)
 
-                # Filter intraday off-hours if applicable
                 if interval in ("1m", "5m", "15m", "1h") and not is_market_hours(bar_ts):
                     continue
 
@@ -362,26 +521,37 @@ def fetch_ohlcv(
     except Exception as e:
         logger.warning(f"yfinance query failed for {canonical}: {e}")
 
-    # If yfinance returned no bars, attempt fallback
+    # Fallback to direct HTTP
     if not bars and use_fallback:
         logger.info(f"Attempting direct HTTP fallback for {canonical}...")
         bars = _fetch_direct_chart_fallback(canonical, start_dt, end_dt, interval)
 
-    # Sort strictly by timestamp to guarantee non-decreasing chronological order
+    # Sort strictly by timestamp
     bars.sort(key=lambda b: b.timestamp)
+
+    # Persist closed historical bars into Parquet cache
+    if bars and use_cache:
+        _write_parquet_cache(canonical, interval, bars)
+
     return bars
 
 
-def fetch_historical_daily(ticker: str, start: str | date, end: str | date) -> list[PriceBar]:
-    """Fetch daily OHLCV bars for an Indian ticker."""
-    return fetch_ohlcv(ticker, start=start, end=end, interval="1d")
+def fetch_historical_daily(
+    ticker: str, start: str | date, end: str | date, use_cache: bool = True
+) -> list[PriceBar]:
+    """Fetch daily OHLCV bars for an Indian ticker with Parquet caching."""
+    return fetch_ohlcv(ticker, start=start, end=end, interval="1d", use_cache=use_cache)
 
 
 def fetch_intraday_bars(
-    ticker: str, start: str | date, end: str | date, interval: str = "5m"
+    ticker: str,
+    start: str | date,
+    end: str | date,
+    interval: str = "5m",
+    use_cache: bool = True,
 ) -> list[PriceBar]:
-    """Fetch intraday OHLCV bars (5m, 15m) for an Indian ticker."""
-    return fetch_ohlcv(ticker, start=start, end=end, interval=interval)
+    """Fetch intraday OHLCV bars (5m, 15m) for an Indian ticker with Parquet caching."""
+    return fetch_ohlcv(ticker, start=start, end=end, interval=interval, use_cache=use_cache)
 
 
 def fetch_liquid_universe(
@@ -389,10 +559,13 @@ def fetch_liquid_universe(
     start: str | date,
     end: str | date,
     interval: str = "1d",
+    use_cache: bool = True,
 ) -> dict[str, list[PriceBar]]:
     """Fetch OHLCV bars for a collection of symbols."""
     results: dict[str, list[PriceBar]] = {}
     for t in tickers:
         canonical = normalize_ticker(t)
-        results[canonical] = fetch_ohlcv(canonical, start, end, interval=interval)
+        results[canonical] = fetch_ohlcv(
+            canonical, start, end, interval=interval, use_cache=use_cache
+        )
     return results
